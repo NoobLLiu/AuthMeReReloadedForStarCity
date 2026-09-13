@@ -201,6 +201,7 @@ identity:
   lore_page_next: 'Next page'
   lore_close: 'Close'
   switch_success_kick: '&aIdentity switch successful, please rejoin the server'
+  switch_success_transfer: '&aIdentity switch successful, reconnecting you to the server automatically'
   switch_self: '&cYou are already using this identity'
   not_bound: '&cYou must have an email address bound to your account to switch identities'
   target_gone: '&cThe selected account no longer exists'

@@ -36,7 +36,7 @@ section:
 commands:
     lg:
         description: '個人登錄資訊選單'
-        detailedDescription: '查看目前登入帳戶、歸屬電郵及該電郵下的所有帳戶。選擇帳戶即可切換身份：切換後會被斷開連線，在 3 分鐘內重新進入伺服器即以所選帳戶的身份上線。使用 /lg sync 可手動將目前連線的UUID同步到帳戶。'
+        detailedDescription: '查看目前登入帳戶、歸屬電郵及該電郵下的所有帳戶。選擇帳戶即可切換身份：在支援的環境下，會自動把你轉回本伺服器，隨後在3分鐘內重新連線即以所選帳戶身份上線；若不支援，則會斷開連線並要求你手動重新連線。使用 /lg sync 可手動將目前連線的UUID同步到帳戶。'
     authme.register:
         description: '登記一個新的玩家帳戶'
         detailedDescription: '透過管理員身份，將一個玩家帳戶以指定的密碼註冊'

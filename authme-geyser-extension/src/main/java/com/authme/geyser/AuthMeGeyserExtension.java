@@ -55,6 +55,9 @@ public class AuthMeGeyserExtension implements Extension {
         identitySwitchListener = new IdentitySwitchListener(pendingSwitchStore, logger);
         eventBus().register(identitySwitchListener);
 
+        // Register the Java->Bedrock transfer bridge so Bedrock players are transferred instead of disconnected
+        eventBus().register(new TransferBridgeListener(logger));
+
         // Schedule periodic cleanup of expired switch files
         cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "authme-geyser-cleanup");

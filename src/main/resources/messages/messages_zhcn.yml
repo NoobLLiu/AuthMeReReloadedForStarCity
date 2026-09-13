@@ -209,6 +209,7 @@ identity:
   lore_page_next: '下一页'
   lore_close: '关闭'
   switch_success_kick: '&a切换成功，请重新进入服务器'
+  switch_success_transfer: '&a切换成功，正在自动把你转回本服务器'
   switch_self: '&c你已处于该身份'
   not_bound: '&c你尚未绑定邮箱，无法切换身份'
   target_gone: '&c所选账号已不存在'
