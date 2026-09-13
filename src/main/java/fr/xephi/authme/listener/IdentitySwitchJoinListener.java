@@ -71,13 +71,13 @@ public class IdentitySwitchJoinListener implements Listener {
             }
 
             // The player joined but NOT as the target identity (typical for Bedrock players
-            // where Floodgate ignores the Paper profile rewrite). Restore the switch so it
-            // stays valid until the switch window expires.
+            // where Floodgate ignores the Paper profile rewrite). Keep the switch pending so
+            // the player can retry by reconnecting until the switch window expires.
             if (!nameLower.equals(pending.getTargetName().toLowerCase(Locale.ROOT))) {
                 logger.info(String.format("Identity switch: '%s' joined but expected '%s' "
-                    + "(Bedrock identity not rewritten by Floodgate); switch kept pending",
+                    + "(identity not rewritten); switch kept pending",
                     player.getName(), pending.getTargetRealName()));
-                messages.send(player, MessageKey.IDENTITY_SWITCH_BEDROCK_UNSUPPORTED);
+                messages.send(player, MessageKey.IDENTITY_SWITCH_NOT_APPLIED);
             }
         }, 20L);
     }

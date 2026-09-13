@@ -4,6 +4,7 @@ import fr.xephi.authme.ConsoleLogger;
 import fr.xephi.authme.data.auth.PlayerAuth;
 import fr.xephi.authme.data.auth.PlayerCache;
 import fr.xephi.authme.datasource.DataSource;
+import fr.xephi.authme.geyser.FloodgateIdentityHook;
 import fr.xephi.authme.geyser.PendingLinkedRegistry;
 import fr.xephi.authme.message.MessageKey;
 import fr.xephi.authme.message.Messages;
@@ -44,6 +45,7 @@ public class IdentitySwitchManager {
     private final Messages messages;
     private final BukkitService bukkitService;
     private final PendingLinkedRegistry linkedRegistry;
+    private final FloodgateIdentityHook identityHook;
 
     /** Pending switches, keyed by the lowercase name of the account that initiated the switch. */
     private final ExpiringMap<String, PendingSwitch> pendingBySource =
@@ -59,12 +61,14 @@ public class IdentitySwitchManager {
 
     @Inject
     IdentitySwitchManager(DataSource dataSource, PlayerCache playerCache, Messages messages,
-                          BukkitService bukkitService, PendingLinkedRegistry linkedRegistry) {
+                          BukkitService bukkitService, PendingLinkedRegistry linkedRegistry,
+                          FloodgateIdentityHook identityHook) {
         this.dataSource = dataSource;
         this.playerCache = playerCache;
         this.messages = messages;
         this.bukkitService = bukkitService;
         this.linkedRegistry = linkedRegistry;
+        this.identityHook = identityHook;
     }
 
     /**
@@ -110,7 +114,11 @@ public class IdentitySwitchManager {
                 return;
             }
 
-            if (isBedrockPlayer(player) && isFloodgateUuid(targetUuid)) {
+            if (isBedrockPlayer(player) && isFloodgateUuid(targetUuid)
+                    && !identityHook.isLinkedModeActive()) {
+                // Bedrock -> Bedrock switches can only be served through the Floodgate
+                // linked-identity hook (linked-player query). Without it the rewrite
+                // cannot take effect, so reject early instead of stranding the player.
                 sendMessage(player, MessageKey.IDENTITY_SWITCH_BEDROCK_UNSUPPORTED);
                 return;
             }
@@ -142,7 +150,11 @@ public class IdentitySwitchManager {
 
             pendingBySource.put(sourceLower, pending);
             sourceByTarget.put(targetLower, sourceLower);
-            if (bedrockSourceId != null) {
+            // Serve the switch through Floodgate's linked-player query, unless the Bedrock
+            // player is switching back to the identity its client natively owns: that
+            // session joins under the target identity anyway, so Floodgate must not be
+            // handed a linked player whose linked UUID equals its own Bedrock ID
+            if (bedrockSourceId != null && !bedrockSourceId.equals(targetUuid)) {
                 linkedRegistry.register(bedrockSourceId, pending);
             }
             logger.info(String.format("Identity switch initiated: '%s' -> '%s'", sourceName,
@@ -151,8 +163,9 @@ public class IdentitySwitchManager {
             // If the source player is a Bedrock player, write pending switch to shared
             // file for the Geyser Extension to read on reconnection. The file is also
             // written in linked mode as fallback: the extension only reads it while the
-            // Floodgate linked-identity hook is inactive.
-            if (bedrockXuid != null) {
+            // Floodgate linked-identity hook is inactive. Skipped when switching back to
+            // the player's own Bedrock identity, which needs no rewriting at all.
+            if (bedrockXuid != null && (bedrockSourceId == null || !bedrockSourceId.equals(targetUuid))) {
                 writeGeyserPendingSwitch(bedrockXuid, pending);
             }
 

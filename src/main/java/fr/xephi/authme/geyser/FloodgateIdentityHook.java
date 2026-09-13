@@ -84,6 +84,18 @@ public class FloodgateIdentityHook {
     }
 
     /**
+     * Returns whether the linked-identity hook is currently active, i.e. whether
+     * Floodgate's API and player link are wrapped by this hook. While active, identity
+     * switches initiated by Bedrock players (including switches to another Bedrock
+     * identity) are served through Floodgate's linked-player query.
+     *
+     * @return true if the hook is installed
+     */
+    public boolean isLinkedModeActive() {
+        return installed;
+    }
+
+    /**
      * Installs the API proxy and the player-link wrapper and writes the capability marker
      * on full success. Any failure restores the original Floodgate state.
      */
