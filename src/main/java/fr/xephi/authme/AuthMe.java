@@ -9,6 +9,7 @@ import fr.xephi.authme.api.v3.AuthMeApi;
 import fr.xephi.authme.command.CommandHandler;
 import fr.xephi.authme.command.TabCompleteHandler;
 import fr.xephi.authme.datasource.DataSource;
+import fr.xephi.authme.geyser.FloodgateIdentityHook;
 import fr.xephi.authme.identity.IdentityMenuService;
 import fr.xephi.authme.identity.IdentitySwitchManager;
 import fr.xephi.authme.initialization.DataFolder;
@@ -95,6 +96,7 @@ public class AuthMe extends JavaPlugin {
     private BukkitService bukkitService;
     private Injector injector;
     private BackupService backupService;
+    private FloodgateIdentityHook identityHook;
     public static ConsoleLogger logger;
 
     /**
@@ -344,6 +346,11 @@ public class AuthMe extends JavaPlugin {
         pluginManager.registerEvents(injector.getSingleton(IdentityMenuClickListener.class), this);
         pluginManager.registerEvents(injector.getSingleton(IdentitySwitchJoinListener.class), this);
 
+        // Floodgate linked-identity hook: after an identity switch, plugins judge the
+        // player by the platform they actually play on
+        identityHook = injector.getSingleton(FloodgateIdentityHook.class);
+        identityHook.register(this);
+
 
         // Try to register 1.8+ player listeners
         if (isClassLoaded("org.bukkit.event.entity.EntityPickupItemEvent") && isClassLoaded("org.bukkit.event.player.PlayerSwapHandItemsEvent")) {
@@ -404,6 +411,9 @@ public class AuthMe extends JavaPlugin {
     @Override
     public void onDisable() {
         // onDisable is also called when we prematurely abort, so any field may be null
+        if (identityHook != null) {
+            identityHook.uninstall();
+        }
         OnShutdownPlayerSaver onShutdownPlayerSaver = injector == null
             ? null
             : injector.createIfHasDependencies(OnShutdownPlayerSaver.class);

@@ -4,6 +4,8 @@ import fr.xephi.authme.ConsoleLogger;
 import fr.xephi.authme.data.auth.PlayerAuth;
 import fr.xephi.authme.data.auth.PlayerCache;
 import fr.xephi.authme.datasource.DataSource;
+import fr.xephi.authme.geyser.FloodgateIdentityHook;
+import fr.xephi.authme.geyser.PendingLinkedRegistry;
 import fr.xephi.authme.message.MessageKey;
 import fr.xephi.authme.message.Messages;
 import fr.xephi.authme.output.ConsoleLoggerFactory;
@@ -42,6 +44,8 @@ public class IdentitySwitchManager {
     private final PlayerCache playerCache;
     private final Messages messages;
     private final BukkitService bukkitService;
+    private final PendingLinkedRegistry linkedRegistry;
+    private final FloodgateIdentityHook identityHook;
 
     /** Pending switches, keyed by the lowercase name of the account that initiated the switch. */
     private final ExpiringMap<String, PendingSwitch> pendingBySource =
@@ -57,11 +61,14 @@ public class IdentitySwitchManager {
 
     @Inject
     IdentitySwitchManager(DataSource dataSource, PlayerCache playerCache, Messages messages,
-                          BukkitService bukkitService) {
+                          BukkitService bukkitService, PendingLinkedRegistry linkedRegistry,
+                          FloodgateIdentityHook identityHook) {
         this.dataSource = dataSource;
         this.playerCache = playerCache;
         this.messages = messages;
         this.bukkitService = bukkitService;
+        this.linkedRegistry = linkedRegistry;
+        this.identityHook = identityHook;
     }
 
     /**
@@ -107,6 +114,15 @@ public class IdentitySwitchManager {
                 return;
             }
 
+            if (isBedrockPlayer(player) && isFloodgateUuid(targetUuid)
+                    && !identityHook.isLinkedModeActive()) {
+                // Bedrock -> Bedrock switches can only be served through the Floodgate
+                // linked-identity hook (linked-player query). Without it the rewrite
+                // cannot take effect, so reject early instead of stranding the player.
+                sendMessage(player, MessageKey.IDENTITY_SWITCH_BEDROCK_UNSUPPORTED);
+                return;
+            }
+
             String targetEmail = targetAuth.getEmail();
             if (isEmailMissing(targetEmail) || !targetEmail.equalsIgnoreCase(sourceEmail)) {
                 sendMessage(player, MessageKey.IDENTITY_SWITCH_EMAIL_MISMATCH);
@@ -123,21 +139,34 @@ public class IdentitySwitchManager {
                 return;
             }
 
+            String bedrockXuid = null;
+            if (isBedrockPlayer(player)) {
+                bedrockXuid = getBedrockXuid(player);
+            }
+            UUID bedrockSourceId = bedrockUuidFromXuid(bedrockXuid);
+
             PendingSwitch pending = new PendingSwitch(sourceLower, targetAuth.getRealName(),
-                targetUuid, ip, isFloodgateUuid(targetUuid));
+                targetUuid, ip, isFloodgateUuid(targetUuid), bedrockSourceId);
 
             pendingBySource.put(sourceLower, pending);
             sourceByTarget.put(targetLower, sourceLower);
+            // Serve the switch through Floodgate's linked-player query, unless the Bedrock
+            // player is switching back to the identity its client natively owns: that
+            // session joins under the target identity anyway, so Floodgate must not be
+            // handed a linked player whose linked UUID equals its own Bedrock ID
+            if (bedrockSourceId != null && !bedrockSourceId.equals(targetUuid)) {
+                linkedRegistry.register(bedrockSourceId, pending);
+            }
             logger.info(String.format("Identity switch initiated: '%s' -> '%s'", sourceName,
                 targetAuth.getRealName()));
 
             // If the source player is a Bedrock player, write pending switch to shared
-            // file for the Geyser Extension to read on reconnection
-            if (isBedrockPlayer(player)) {
-                String xuid = getBedrockXuid(player);
-                if (xuid != null) {
-                    writeGeyserPendingSwitch(xuid, pending);
-                }
+            // file for the Geyser Extension to read on reconnection. The file is also
+            // written in linked mode as fallback: the extension only reads it while the
+            // Floodgate linked-identity hook is inactive. Skipped when switching back to
+            // the player's own Bedrock identity, which needs no rewriting at all.
+            if (bedrockXuid != null && (bedrockSourceId == null || !bedrockSourceId.equals(targetUuid))) {
+                writeGeyserPendingSwitch(bedrockXuid, pending);
             }
 
             bukkitService.runTask(player, () -> {
@@ -226,6 +255,7 @@ public class IdentitySwitchManager {
         PendingSwitch pending = pendingBySource.get(lower);
         if (pending != null) {
             sourceByTarget.remove(pending.getTargetName());
+            discardLinkedData(pending);
         }
         pendingBySource.remove(lower);
     }
@@ -257,6 +287,7 @@ public class IdentitySwitchManager {
         PendingSwitch pending = pendingBySource.get(sourceLower);
         sourceByTarget.remove(targetNameLower);
         pendingBySource.remove(sourceLower);
+        discardLinkedData(pending);
         return pending;
     }
 
@@ -437,6 +468,56 @@ public class IdentitySwitchManager {
                 xuid, pending.getTargetRealName()));
         } catch (Exception e) {
             logger.warning("Could not write Geyser pending switch file for XUID '" + xuid + "': " + e.getMessage());
+        }
+    }
+
+    /**
+     * Discards the linked-mode data belonging to the given pending switch: the registry
+     * entry serving Floodgate's linked-player query and the shared pending switch file
+     * (which the Geyser Extension no longer consumes in linked mode).
+     *
+     * @param pending the pending switch being consumed or discarded, may be null
+     */
+    private void discardLinkedData(PendingSwitch pending) {
+        if (pending == null) {
+            return;
+        }
+        linkedRegistry.consume(pending.getBedrockSourceId());
+        deleteGeyserPendingSwitch(pending.getBedrockSourceId());
+    }
+
+    /**
+     * Derives the Floodgate UUID of a Bedrock player from its XUID, mirroring Floodgate's
+     * UUID generation: the XUID is stored in the least significant bits of the UUID.
+     *
+     * @param xuid the Bedrock player's Xbox User ID
+     * @return the Floodgate UUID, or null if the XUID is missing or not numeric
+     */
+    private static UUID bedrockUuidFromXuid(String xuid) {
+        if (xuid == null || xuid.isEmpty()) {
+            return null;
+        }
+        try {
+            return new UUID(0L, Long.parseLong(xuid));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Deletes the pending switch file of the given Bedrock player, closing the loop in
+     * linked mode: the file is only a fallback there and must not survive the switch.
+     *
+     * @param bedrockSourceId the Floodgate UUID of the Bedrock player who initiated the switch
+     */
+    private void deleteGeyserPendingSwitch(UUID bedrockSourceId) {
+        if (bedrockSourceId == null) {
+            return;
+        }
+        String xuid = String.valueOf(bedrockSourceId.getLeastSignificantBits());
+        File file = new File(GEYSER_SWITCH_DIR, xuid + ".properties");
+        if (file.exists() && !file.delete()) {
+            logger.warning("Could not delete Geyser pending switch file: " + file.getAbsolutePath());
         }
     }
 }

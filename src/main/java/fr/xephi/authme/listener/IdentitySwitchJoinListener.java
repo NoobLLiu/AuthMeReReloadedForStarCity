@@ -1,6 +1,7 @@
 package fr.xephi.authme.listener;
 
 import fr.xephi.authme.ConsoleLogger;
+import fr.xephi.authme.geyser.SwitchedPlatformTracker;
 import fr.xephi.authme.identity.IdentitySwitchManager;
 import fr.xephi.authme.identity.PendingSwitch;
 import fr.xephi.authme.message.MessageKey;
@@ -12,6 +13,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 import javax.inject.Inject;
 import java.util.Locale;
@@ -28,13 +30,15 @@ public class IdentitySwitchJoinListener implements Listener {
     private final IdentitySwitchManager identitySwitchManager;
     private final Messages messages;
     private final BukkitService bukkitService;
+    private final SwitchedPlatformTracker platformTracker;
 
     @Inject
     IdentitySwitchJoinListener(IdentitySwitchManager identitySwitchManager, Messages messages,
-                               BukkitService bukkitService) {
+                               BukkitService bukkitService, SwitchedPlatformTracker platformTracker) {
         this.identitySwitchManager = identitySwitchManager;
         this.messages = messages;
         this.bukkitService = bukkitService;
+        this.platformTracker = platformTracker;
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -55,6 +59,7 @@ public class IdentitySwitchJoinListener implements Listener {
             if (consumed != null) {
                 // The player joined as the target identity: the switch succeeded
                 identitySwitchManager.markAutoLogin(nameLower, ip);
+                platformTracker.register(player.getUniqueId(), consumed.isBedrockSource());
                 logger.info(String.format("Identity switch completed: player joined as '%s'", player.getName()));
                 return;
             }
@@ -66,14 +71,19 @@ public class IdentitySwitchJoinListener implements Listener {
             }
 
             // The player joined but NOT as the target identity (typical for Bedrock players
-            // where Floodgate ignores the Paper profile rewrite). Restore the switch so it
-            // stays valid until the switch window expires.
+            // where Floodgate ignores the Paper profile rewrite). Keep the switch pending so
+            // the player can retry by reconnecting until the switch window expires.
             if (!nameLower.equals(pending.getTargetName().toLowerCase(Locale.ROOT))) {
                 logger.info(String.format("Identity switch: '%s' joined but expected '%s' "
-                    + "(Bedrock identity not rewritten by Floodgate); switch kept pending",
+                    + "(identity not rewritten); switch kept pending",
                     player.getName(), pending.getTargetRealName()));
-                messages.send(player, MessageKey.IDENTITY_SWITCH_BEDROCK_UNSUPPORTED);
+                messages.send(player, MessageKey.IDENTITY_SWITCH_NOT_APPLIED);
             }
         }, 20L);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        platformTracker.unregister(event.getPlayer().getUniqueId());
     }
 }

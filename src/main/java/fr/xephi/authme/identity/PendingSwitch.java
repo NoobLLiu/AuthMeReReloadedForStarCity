@@ -18,6 +18,8 @@ public class PendingSwitch {
     private final String ip;
     /** Whether the target account is a Bedrock (Floodgate) account. */
     private final boolean bedrockTarget;
+    /** Floodgate UUID of the Bedrock player who initiated the switch; null for Java sources. */
+    private final UUID bedrockSourceId;
 
     /**
      * Constructor.
@@ -27,14 +29,17 @@ public class PendingSwitch {
      * @param targetUuid UUID to give the player upon reconnection
      * @param ip the IP address the switch was initiated from
      * @param bedrockTarget whether the target account is a Bedrock (Floodgate) account
+     * @param bedrockSourceId the Floodgate UUID of the Bedrock player who initiated the
+     *        switch, or null if the switch was initiated by a Java player
      */
     public PendingSwitch(String sourceName, String targetRealName, UUID targetUuid, String ip,
-                         boolean bedrockTarget) {
+                         boolean bedrockTarget, UUID bedrockSourceId) {
         this.sourceName = sourceName;
         this.targetRealName = targetRealName;
         this.targetUuid = targetUuid;
         this.ip = ip;
         this.bedrockTarget = bedrockTarget;
+        this.bedrockSourceId = bedrockSourceId;
     }
 
     /**
@@ -77,5 +82,20 @@ public class PendingSwitch {
      */
     public boolean isBedrockTarget() {
         return bedrockTarget;
+    }
+
+    /**
+     * @return the Floodgate UUID of the Bedrock player who initiated the switch, or null
+     *         if the switch was initiated by a Java player
+     */
+    public UUID getBedrockSourceId() {
+        return bedrockSourceId;
+    }
+
+    /**
+     * @return true if the switch was initiated by a Bedrock (Floodgate) player
+     */
+    public boolean isBedrockSource() {
+        return bedrockSourceId != null;
     }
 }
