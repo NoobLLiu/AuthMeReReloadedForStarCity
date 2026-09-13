@@ -16,11 +16,15 @@ import java.util.concurrent.CompletableFuture;
  * linked Java identity. This is what makes plugins judge the player as a Bedrock player
  * playing under a Java identity.
  * <p>
- * All other queries are delegated to the original implementation. Note that
- * {@link #isEnabled()} and {@link #isEnabledAndAllowed()} return {@code true} regardless
- * of the link settings: Floodgate's handshake query path may bail out otherwise, and the
- * switch must be served even when account linking is disabled on the server. Actual
- * linking remains locked via {@link #isAllowLinking()}, which delegates to the original.
+ * {@link #isEnabled()} returns {@code true} regardless of the link settings: Floodgate's
+ * handshake only queries the link when it is enabled, and the switch must be served even
+ * when account linking is disabled on the server. Queries without a pending switch are
+ * delegated while the original link is enabled; when it is disabled (the usual setup),
+ * they resolve as "no linked player" instead of tripping the original implementation's
+ * failing futures, which Floodgate would log as an error on every Bedrock handshake.
+ * Actual linking remains locked: {@link #isAllowLinking()} and
+ * {@link #isEnabledAndAllowed()} (the gate of Floodgate's link commands) delegate to the
+ * original implementation.
  */
 public class PendingSwitchPlayerLink implements PlayerLink {
 
@@ -35,11 +39,14 @@ public class PendingSwitchPlayerLink implements PlayerLink {
     @Override
     public CompletableFuture<LinkedPlayer> getLinkedPlayer(UUID bedrockId) {
         PendingSwitch pending = linkedRegistry.get(bedrockId);
-        if (pending == null) {
+        if (pending != null) {
+            return CompletableFuture.completedFuture(
+                LinkedPlayer.of(pending.getTargetRealName(), pending.getTargetUuid(), bedrockId));
+        }
+        if (delegate.isEnabled()) {
             return delegate.getLinkedPlayer(bedrockId);
         }
-        return CompletableFuture.completedFuture(
-            LinkedPlayer.of(pending.getTargetRealName(), pending.getTargetUuid(), bedrockId));
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
@@ -47,7 +54,10 @@ public class PendingSwitchPlayerLink implements PlayerLink {
         if (linkedRegistry.get(bedrockId) != null) {
             return CompletableFuture.completedFuture(true);
         }
-        return delegate.isLinkedPlayer(bedrockId);
+        if (delegate.isEnabled()) {
+            return delegate.isLinkedPlayer(bedrockId);
+        }
+        return CompletableFuture.completedFuture(false);
     }
 
     @Override
@@ -58,8 +68,8 @@ public class PendingSwitchPlayerLink implements PlayerLink {
 
     @Override
     public boolean isEnabledAndAllowed() {
-        // Defensive override: serves whichever check Floodgate's handshake query performs
-        return true;
+        // Keep the original setting: link commands stay locked when linking is disabled
+        return delegate.isEnabledAndAllowed();
     }
 
     @Override
