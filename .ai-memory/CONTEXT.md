@@ -6,18 +6,16 @@
 
 - **项目**：AuthMeReloaded（Minecraft 登录/认证插件），当前为 Fork 版本 `5.7.0-FORK`
 - **位置**：`/workspace`
-- **构建**：Maven（`pom.xml`，Java + Spigot API + ProtocolLib 等依赖）。已成功构建，产物在 `target/`：
-  - `AuthMe-5.7.0-FORK-Lite.jar` / `AuthMe-5.7.0-FORK-Universal.jar`（构建于 2026-09-12 04:13，与最新提交同时，含本次功能）
+- **构建**：Maven。含两个模块：AuthMe 主插件（根 `pom.xml`）+ `authme-geyser-extension/`（Geyser 扩展，独立 pom，依赖 `org.geysermc.geyser:api:2.11.2-SNAPSHOT` provided，无 Floodgate 依赖）
+- **一键构建**：`./build.sh [all|authme|extension]`（Windows 用 `build.bat`），产物复制到 `dist/`；也可在根目录/扩展目录分别 `mvn -DskipTests package`。⚠️ 当前 `target/`、`dist/` 均为空（上次会话清理过临时产物），部署前需重新构建
 - **远程**：`origin/feat/agent-mail`（主开发分支），作者 NoobLLiu
 
-## 二、Git 状态（截至 2026-09-12）
+## 二、Git 状态（截至 2026-09-13）
 
-- **当前分支**：`trae/agent-0iHQBQ`
+- **当前分支**：`trae/agent-MIWt87`，HEAD `d37ffe83`
 - **工作区**：干净，无未提交更改
-- **分支领先 `origin/feat/agent-mail` 共 2 个提交（尚未合并）**：
-  1. `cd073f1` feat: 研究实现Minecraft多账号身份切换 — 仅 `.trae-html-share-packages` 下 5 个 `*.html.zip` 重新打包（内容不变）
-  2. `7fde343` feat: 研究实现Minecraft多账号身份切换 — **核心功能实现**，20 个文件，`+1424 / -4`
-- `origin/feat/agent-mail` 当前 HEAD：`e0c9b60`（Merge pull request #1 from NoobLLiu/trae/agent-YXxVwV）
+- **分支内容**：在 e7684e39（PR #2 合并）之上有 11 个提交，标题均为 "feat: 实现基岩版玩家身份切换功能"，累计 `+826 / -5`（17 个文件）：新增 `authme-geyser-extension/` 模块（pom.xml、AuthMeGeyserExtension、IdentitySwitchListener、PendingSwitchStore、extension.yml）+ AuthMe 侧 `IdentitySwitchManager`（+99）、`PreLoginIdentityListener`（+8）+ CI 修复（build.yml / maven.yml）+ `build.sh` / `build.bat`
+- **远程**：`origin/feat/agent-mail` HEAD 为 `0222c1eb`（Merge pull request #6 from NoobLLiu/trae/agent-MIWt87，合并的是本分支早期状态）；origin **不是**当前 HEAD 的祖先（历史有分叉），本地最新提交尚未合并回 origin
 
 ## 三、本次会话做了什么
 
@@ -180,13 +178,67 @@ Bug 2 — PendingSwitch 消费过早：
 - Java 玩家：包重写 → profile 重写 → Player 以目标身份加入 → PlayerJoinEvent 消费 switch → 自动登录 ✓
 - 基岩→Java 切换：包重写被 Floodgate 覆盖 → Player 以原始身份加入 → PlayerJoinEvent 检测不匹配 → switch 保持活跃 → 提示不支持 ✓
 
-**当前限制**：基岩版玩家暂时无法切换到 Java 版身份。这是 Floodgate 的架构限制（从自己的 GeyserSession 创建 Player，不遵循事件 profile）。未来可通过 Floodgate API 直接干预来实现。
+**当时限制**：基岩版玩家暂时无法切换到 Java 版身份（Floodgate 架构限制，从自己的 GeyserSession 创建 Player，不遵循事件 profile）。→ 已在六之七/六之八通过 Geyser 扩展在连接层改写身份解决（见下文）。
+
+## 六之七、会话 8：Geyser 扩展创建与加载错误修复（2026-09-13，已提交）
+
+**目标**：让基岩版玩家（Geyser+Floodgate 连接）也能用 /lg 切换到 Java 版身份。AuthMe 本体无法完成（六之六的 Floodgate 架构限制），故新建 Geyser 扩展在连接层改写身份。
+
+**新增模块 authme-geyser-extension/**（独立 Maven 项目，非 Bukkit 插件）：
+1. `pom.xml` — 依赖 `org.geysermc.geyser:api:2.11.2-SNAPSHOT`（provided，与服务器 Geyser 版本一致）；无 Floodgate 依赖
+2. `src/main/resources/extension.yml` — 扩展元数据：
+   ```yaml
+   id: authme-geyser
+   name: AuthMeGeyser        # 必须匹配 ^[A-Za-z_.-]+$（不能有空格）
+   main: com.authme.geyser.AuthMeGeyserExtension
+   api: 2.11.2               # 必须匹配 ^\d+\.\d+\.\d+$（三段数字，跟随 Geyser 版本）
+   version: '1.0.0'
+   author: AuthMe
+   ```
+3. `AuthMeGeyserExtension.java` — 主类。**Geyser 2.11.2 的 Extension 接口没有 onEnable()/onDisable()**，生命周期改为事件驱动：`@Subscribe onPostInitialize(GeyserPostInitializeEvent)` 初始化 PendingSwitchStore、注册 IdentitySwitchListener、启动过期清理调度器；`@Subscribe onGeyserShutdown(GeyserShutdownEvent)` 关闭调度器。加载器只实例化主类并自动注册其中的事件监听。
+4. `PendingSwitchStore.java` — 读写 AuthMe 与扩展之间的共享 pending switch 文件（AuthMe 本体 initiateSwitch 时 writeGeyserPendingSwitch 写入，扩展按 XUID 消费）。构造函数直接接收 AuthMe 目录：先查 `user.dir/plugins/AuthMe`，再从扩展 dataFolder 逐级向上搜索（Spigot 布局 `<server>/plugins/Geyser-Spigot/extensions/<id>/` 向上 2 级不够，旧版 bug 已修复）。
+5. `IdentitySwitchListener.java` — SessionLoginEvent 监听（详见六之八最终版）。
+
+**期间修复的加载错误**（用户日志 `Invalid extension name, must match: ^[A-Za-z_.-]+$`）：
+- name 从 "AuthMe Geyser Extension"（含空格）改为 AuthMeGeyser
+- api 从 `1.0` 改为 `2.11.2`（三段式校验，潜伏问题）
+- 扩展最初针对 Geyser API 2.4.3 编译而服务器运行 2.11.2，新版接口无 onEnable/onDisable → 升级依赖并事件化重构
+- 顺带修复 CI（build.yml / maven.yml）、新增 build.sh / build.bat 一键构建脚本
+
+## 六之八、会话 9：基岩→Java 身份改写完全重写（Floodgate 绕过）（2026-09-13，已提交）
+
+**用户反馈**：扩展加载成功但基岩玩家切换后仍以 BE_ 身份加入；日志 `applying Bedrock switch ... (original: 'null', ...)` 与 `could not modify session or FloodgatePlayer`；截图"基岩版暂不支持切换到Java版身份"（该消息来自 AuthMe `IdentitySwitchJoinListener.java:75` 的失败提示，说明两端对接本身是好的，问题在扩展改写无效）。
+
+**根因（克隆 Geyser 2.11.2 源码逐层核实，临时克隆已清理）**：
+1. `javaUsername()`/`javaUuid()` 是从 playerEntity **计算的属性，无字段可反射**（旧扩展反射失败 → 日志 original: 'null'）
+2. Floodgate 数据流：`GeyserSessionAdapter.packetSending` 将 BedrockData（bedrockUsername/xuid）加密附加到 handshake hostname → Floodgate 插件据此强制创建 `BE_前缀 + XUID UUID` 的 Player，**无视 Paper profile/ProtocolLib 的一切上层改写**
+3. 关键时序：`connectDownstream()` 先触发 `SessionLoginEvent`（扩展拦截点）→ 创建 GeyserSessionAdapter（读 `remoteServer().authType()`）→ 用 `protocol` 建立下游连接
+4. `MinecraftProtocol.profile` 是可替换字段；authType=OFFLINE 时 adapter 不附加 Floodgate 数据
+
+**修复（最终版代码）**：
+1. `authme-geyser-extension/.../IdentitySwitchListener.java` — 完全重写，`@Subscribe onSessionLogin(SessionLoginEvent)` 中：
+   - 反射替换 `protocol.profile` 为 `new GameProfile(targetUuid, targetName)`（类名 `org.geysermc.mcprotocollib.auth.GameProfile`，构造参数 (UUID, String)）→ LoginStart 包携带目标 Java 身份
+   - 反射替换 `remoteServer` 为 `OfflineAuthRemoteServer` 委托包装（全部方法透传，仅 `authType()` 返回 OFFLINE）→ GeyserSessionAdapter 不再附加 Floodgate 加密数据 → 服务器视为普通 Java 连接，Floodgate 完全不介入
+   - 目标是基岩账号（Floodgate UUID 前缀 `00000000-0000-0000-`）时跳过并警告（基岩→基岩不支持）
+   - 通过 `connection.xuid()` 读 XUID 并消费 pending 文件
+2. `identity/IdentitySwitchManager.java` — 新增 `getPendingSwitchByTarget(String name)`（sourceByTarget 反查）
+3. `listener/PreLoginIdentityListener.java` — 按 source 查 pending 失败后增加按 target 反查分支：扩展改写后的连接以**目标名**到达，而离线服务器按名字重算 offline UUID，必须在此阶段用 pending 中的 UUID 修正
+
+**预期成功日志**（下次真实服务器验证时核对）：
+- `[authme-geyser] AuthMe identity switch: connection '<基岩名>' will join the Java server as '<目标名>' (Floodgate bypassed)`
+- 不再出现 `[floodgate] Floodgate 玩家 ... 加入了`
+
+**部署**：两个 jar 必须同时更新——AuthMe 插件 jar + `authme-geyser-extension-1.0.0.jar` → `plugins/Geyser-Spigot/extensions/`。当前 target/ 已清理，需先 `./build.sh` 重新构建。
+
+**注意**：此方案未经真实服务器验证。若仍有问题，优先核对 Geyser 2.11.2 下 SessionLoginEvent 触发时序与 `protocol`/`remoteServer` 字段名。
 
 ## 七、后续可继续的工作（新会话候选）
 
-1. **合并分支**：将 `trae/agent-0iHQBQ` 合并到 `origin/feat/agent-mail`（合并/创建 PR）
-2. **功能验证**：在测试服验证 /lg 菜单、切换、重连改写与自动登录（含基岩版账号场景）
-3. **潜在改进点**（未做，仅提示）：
+1. **验证基岩→Java 身份切换**：六之八的新方案（protocol.profile 反射改写 + OFFLINE 包装绕过 Floodgate）尚未在真实服务器验证；成功标志与失败排查见六之八
+2. **合并分支**：将本地 `trae/agent-MIWt87` 的最新提交合并回 `origin/feat/agent-mail`（origin 已合并过早期状态 PR #6，历史有分叉，需先处理）
+3. **功能验证**：在测试服验证 /lg 菜单、Java→Java 切换、UUID 同步、自动登录等既有功能
+4. **潜在改进点**（未做，仅提示）：
    - 其余语言（如 zhtw/ja 等）的 help/messages 翻译尚未补充
    - 无 Paper API + 基岩目标的切换失败仅日志警告，无玩家提示
    - `PendingSwitch` 与自动登录均依赖 `ExpiringMap`，3 分钟窗口固定，未做成配置项
+   - 基岩→基岩切换明确不支持（扩展中跳过并警告）
