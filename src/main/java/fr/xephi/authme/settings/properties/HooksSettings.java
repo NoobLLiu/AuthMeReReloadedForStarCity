@@ -42,6 +42,13 @@ public final class HooksSettings implements SettingsHolder {
     public static final Property<Boolean> IGNORE_BEDROCK_NAME_CHECK =
         newProperty("Hooks.ignoreBedrockNameCheck", true);
 
+    @Comment({"Make other plugins judge players with a switched identity (/lg) by the",
+        "platform they actually play on instead of the switched identity's type.",
+        "When enabled, AuthMe wraps Floodgate's player-link API and corrects the",
+        "Floodgate API queries for switched players. Requires floodgate."})
+    public static final Property<Boolean> FLOODGATE_LINKED_IDENTITY =
+        newProperty("Hooks.floodgateLinkedIdentity", true);
+
 
     @Comment("Send player to this BungeeCord server after register/login")
     public static final Property<String> BUNGEECORD_SERVER =

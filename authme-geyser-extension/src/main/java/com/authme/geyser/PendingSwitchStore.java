@@ -20,6 +20,7 @@ import java.util.UUID;
 public class PendingSwitchStore {
 
     private static final String SWITCH_DIR_NAME = "geyser-pending-switches";
+    private static final String LINKED_MODE_MARKER = "geyser-linked-mode.enabled";
     private static final long EXPIRY_MILLIS = 5 * 60 * 1000L; // 5 minutes (slightly longer than AuthMe's 3-min window)
 
     private final Path switchDir;
@@ -28,6 +29,17 @@ public class PendingSwitchStore {
     public PendingSwitchStore(Path authMeDir, ExtensionLogger logger) {
         this.switchDir = authMeDir.resolve(SWITCH_DIR_NAME);
         this.logger = logger;
+    }
+
+    /**
+     * Returns whether AuthMe's Floodgate linked-identity hook is active. In linked mode
+     * the hook serves pending switches through Floodgate's linked-player query during
+     * the handshake, so this extension must leave the session untouched.
+     *
+     * @return true if the linked-mode marker file exists in AuthMe's data folder
+     */
+    public boolean isLinkedModeEnabled() {
+        return Files.exists(switchDir.getParent().resolve(LINKED_MODE_MARKER));
     }
 
     /**

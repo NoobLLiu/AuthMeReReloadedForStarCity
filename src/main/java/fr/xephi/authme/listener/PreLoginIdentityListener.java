@@ -1,6 +1,7 @@
 package fr.xephi.authme.listener;
 
 import fr.xephi.authme.ConsoleLogger;
+import fr.xephi.authme.geyser.SwitchedPlatformTracker;
 import fr.xephi.authme.identity.IdentitySwitchManager;
 import fr.xephi.authme.identity.PendingSwitch;
 import fr.xephi.authme.message.MessageKey;
@@ -51,11 +52,14 @@ public class PreLoginIdentityListener implements Listener {
     private final ConsoleLogger logger = ConsoleLoggerFactory.get(PreLoginIdentityListener.class);
     private final IdentitySwitchManager identitySwitchManager;
     private final Messages messages;
+    private final SwitchedPlatformTracker platformTracker;
 
     @Inject
-    PreLoginIdentityListener(IdentitySwitchManager identitySwitchManager, Messages messages) {
+    PreLoginIdentityListener(IdentitySwitchManager identitySwitchManager, Messages messages,
+                             SwitchedPlatformTracker platformTracker) {
         this.identitySwitchManager = identitySwitchManager;
         this.messages = messages;
+        this.platformTracker = platformTracker;
     }
 
     /**
@@ -109,6 +113,8 @@ public class PreLoginIdentityListener implements Listener {
             logger.logException("Could not rewrite identity profile of '" + sourceLower + "'", e);
             return;
         }
+
+        platformTracker.register(pending.getTargetUuid(), pending.isBedrockSource());
 
         // Don't consume the PendingSwitch or mark auto-login here: for Bedrock players
         // the Paper profile rewrite is ignored by Floodgate's Player creation, so we must

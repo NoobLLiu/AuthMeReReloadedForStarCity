@@ -53,6 +53,12 @@ public class IdentitySwitchListener {
     }
 
     private void handleSessionLogin(SessionLoginEvent event) {
+        if (store.isLinkedModeEnabled()) {
+            // AuthMe's Floodgate linked-identity hook serves this switch through Floodgate's
+            // linked-player query during the handshake; leave the session and the pending
+            // file untouched (AuthMe consumes them on the Java side)
+            return;
+        }
         GeyserConnection connection = event.connection();
         if (connection == null) {
             return;
