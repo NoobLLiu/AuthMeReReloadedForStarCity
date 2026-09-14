@@ -446,9 +446,6 @@ public enum MessageKey {
     /** Switch successful, please rejoin the server. */
     IDENTITY_SWITCH_SUCCESS_KICK("identity.switch_success_kick"),
 
-    /** Switch successful, transferring you back to the server automatically. */
-    IDENTITY_SWITCH_SUCCESS_TRANSFER("identity.switch_success_transfer"),
-
     /** You are already using this identity. */
     IDENTITY_SWITCH_SELF("identity.switch_self"),
 

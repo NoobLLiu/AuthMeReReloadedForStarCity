@@ -171,9 +171,7 @@ public class IdentitySwitchManager {
 
             bukkitService.runTask(player, () -> {
                 player.closeInventory();
-                String transferMessage = messages.retrieveSingle(player, MessageKey.IDENTITY_SWITCH_SUCCESS_TRANSFER);
-                String kickFallbackMessage = messages.retrieveSingle(player, MessageKey.IDENTITY_SWITCH_SUCCESS_KICK);
-                transferPlayerOrKick(player, transferMessage, kickFallbackMessage);
+                player.kickPlayer(messages.retrieveSingle(player, MessageKey.IDENTITY_SWITCH_SUCCESS_KICK));
             });
         });
     }
@@ -356,63 +354,6 @@ public class IdentitySwitchManager {
      */
     public static boolean isFloodgateUuid(UUID uuid) {
         return uuid != null && uuid.toString().startsWith("00000000-0000-0000-");
-    }
-
-    /**
-     * Attempts to transfer the player back to the current server so they reconnect automatically.
-     * Falls back to disconnecting with a notice if transfer is unavailable or fails.
-     */
-    private void transferPlayerOrKick(Player player, String transferMessage, String kickFallbackMessage) {
-        if (!player.isOnline()) {
-            return;
-        }
-        try {
-            String serverIp = Bukkit.getIp();
-            int serverPort = Bukkit.getPort();
-            if (serverPort <= 0) {
-                serverPort = 25565;
-            }
-            String host = serverIp == null || serverIp.isEmpty() ? "127.0.0.1" : serverIp;
-
-            boolean transferred = transferPlayerReflective(player, host, serverPort);
-
-            if (transferred) {
-                if (transferMessage != null && !transferMessage.isEmpty()) {
-                    player.sendMessage(transferMessage);
-                }
-                return;
-            }
-
-            logger.warning("Transfer to self failed for player '" + player.getName() + "', falling back to kick");
-            player.kickPlayer(kickFallbackMessage);
-        } catch (Throwable t) {
-            logger.logException("Transfer to self is not available, falling back to kick", t);
-            try {
-                if (player.isOnline()) {
-                    player.kickPlayer(kickFallbackMessage);
-                }
-            } catch (Throwable kickError) {
-                logger.logException("Kick fallback also failed for player '" + player.getName() + "'", kickError);
-            }
-        }
-    }
-
-    /**
-     * Reflective call to {@code Player.transfer(InetSocketAddress)} which is Paper-only API.
-     *
-     * @return true if the transfer was sent successfully, false if the method does not exist or failed
-     */
-    private static boolean transferPlayerReflective(Player player, String host, int port) {
-        try {
-            java.lang.reflect.Method transferMethod = player.getClass().getMethod("transfer", String.class, int.class);
-            Object result = transferMethod.invoke(player, host, port);
-            return Boolean.TRUE.equals(result);
-        } catch (NoSuchMethodException e) {
-            // Paper API not available
-            return false;
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     /**

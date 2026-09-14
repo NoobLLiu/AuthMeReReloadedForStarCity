@@ -36,7 +36,7 @@ section:
 commands:
     lg:
         description: 'Personal login information menu'
-        detailedDescription: 'View the account you are logged in with, its bound email address and all accounts under that email. Select an account to switch identity: when supported, you will be transferred back to this server automatically and, by reconnecting within three minutes, you will enter the server as the selected account; otherwise you will be disconnected and asked to rejoin. Use /lg sync to manually record the UUID you are currently connected with into your account.'
+        detailedDescription: 'View the account you are logged in with, its bound email address and all accounts under that email. Select an account to switch identity: you will be disconnected and, by rejoining within three minutes, you will enter the server as the selected account. Use /lg sync to manually record the UUID you are currently connected with into your account.'
     authme.register:
         description: 'Register a player'
         detailedDescription: 'Register the specified player with the specified password.'
