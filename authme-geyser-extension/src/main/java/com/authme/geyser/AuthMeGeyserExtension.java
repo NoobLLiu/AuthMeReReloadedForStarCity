@@ -55,6 +55,7 @@ public class AuthMeGeyserExtension implements Extension {
         identitySwitchListener = new IdentitySwitchListener(pendingSwitchStore, logger);
         eventBus().register(identitySwitchListener);
 
+
         // Schedule periodic cleanup of expired switch files
         cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "authme-geyser-cleanup");
