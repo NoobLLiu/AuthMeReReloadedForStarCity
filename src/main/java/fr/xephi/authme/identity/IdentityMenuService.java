@@ -6,6 +6,7 @@ import fr.xephi.authme.datasource.DataSource;
 import fr.xephi.authme.message.MessageKey;
 import fr.xephi.authme.message.Messages;
 import fr.xephi.authme.service.BukkitService;
+import fr.xephi.authme.service.hook.GMZCSkinCacheHook;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -47,14 +48,16 @@ public class IdentityMenuService {
     private final PlayerCache playerCache;
     private final Messages messages;
     private final BukkitService bukkitService;
+    private final GMZCSkinCacheHook skinCacheHook;
 
     @Inject
     IdentityMenuService(DataSource dataSource, PlayerCache playerCache, Messages messages,
-                        BukkitService bukkitService) {
+                        BukkitService bukkitService, GMZCSkinCacheHook skinCacheHook) {
         this.dataSource = dataSource;
         this.playerCache = playerCache;
         this.messages = messages;
         this.bukkitService = bukkitService;
+        this.skinCacheHook = skinCacheHook;
     }
 
     /**
@@ -169,7 +172,9 @@ public class IdentityMenuService {
     private ItemStack createCurrentAccountItem(Player player) {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
-        meta.setOwningPlayer(player);
+        if (!skinCacheHook.applySkin(meta, player)) {
+            meta.setOwningPlayer(player);
+        }
         meta.setDisplayName(ChatColor.AQUA + player.getName());
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_CURRENT));
@@ -225,7 +230,9 @@ public class IdentityMenuService {
         SkullMeta meta = (SkullMeta) item.getItemMeta();
         UUID uuid = entry.getUuid();
         if (uuid != null) {
-            meta.setOwningPlayer(Bukkit.getOfflinePlayer(uuid));
+            if (!skinCacheHook.applySkin(meta, uuid)) {
+                meta.setOwningPlayer(Bukkit.getOfflinePlayer(uuid));
+            }
         }
         String edition = "";
         if (uuid != null) {
