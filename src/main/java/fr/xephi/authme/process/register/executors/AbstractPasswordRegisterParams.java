@@ -38,6 +38,16 @@ public abstract class AbstractPasswordRegisterParams extends RegistrationParamet
         return password;
     }
 
+    /**
+     * Returns the email address bound to the registration, or {@code null} if the
+     * registration method does not provide one.
+     *
+     * @return the email address of the registration, or null
+     */
+    public String getEmail() {
+        return null;
+    }
+
     void setHashedPassword(HashedPassword hashedPassword) {
         this.hashedPassword = hashedPassword;
     }

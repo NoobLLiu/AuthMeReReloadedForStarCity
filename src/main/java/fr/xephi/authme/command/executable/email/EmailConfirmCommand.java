@@ -14,6 +14,7 @@ import fr.xephi.authme.process.register.executors.EmailAdoptRegisterParams;
 import fr.xephi.authme.process.register.executors.RegistrationMethod;
 import fr.xephi.authme.security.crypts.HashedPassword;
 import fr.xephi.authme.service.AccountMigrationService;
+import fr.xephi.authme.service.BukkitService;
 import fr.xephi.authme.service.CommonService;
 import fr.xephi.authme.service.EmailPasswordService;
 import fr.xephi.authme.service.PendingEmailChangeCache;
@@ -63,6 +64,9 @@ public class EmailConfirmCommand extends PlayerCommand {
     private DataSource dataSource;
 
     @Inject
+    private BukkitService bukkitService;
+
+    @Inject
     private Management management;
 
     @Inject
@@ -84,11 +88,14 @@ public class EmailConfirmCommand extends PlayerCommand {
                 processRegistrationConfirmation(player, playerName, arguments.get(0));
                 return;
             }
-            if (dataSource.isAuthAvailable(playerName)) {
-                commonService.send(player, MessageKey.LOGIN_MESSAGE);
-            } else {
-                commonService.send(player, MessageKey.REGISTER_MESSAGE);
-            }
+            // Database operations are performed asynchronously, as in the other async processes
+            bukkitService.runTaskAsynchronously(() -> {
+                if (dataSource.isAuthAvailable(playerName)) {
+                    commonService.send(player, MessageKey.LOGIN_MESSAGE);
+                } else {
+                    commonService.send(player, MessageKey.REGISTER_MESSAGE);
+                }
+            });
             return;
         }
 
@@ -104,37 +111,40 @@ public class EmailConfirmCommand extends PlayerCommand {
             return;
         }
 
-        // Phase 2: code matches — persist the new email
-        PlayerAuth auth = playerCache.getAuth(playerName);
-        auth.setEmail(pending.getNewEmail());
-        // The password follows the email: if the new email already has a password
-        // (other accounts are bound to it), it is adopted by this account
-        HashedPassword emailPassword = emailPasswordService.findPasswordByEmail(pending.getNewEmail());
-        boolean saved = dataSource.updateEmail(auth);
-        if (emailPassword != null) {
-            auth.setPassword(emailPassword);
-            saved = saved && dataSource.updatePassword(auth);
-        }
-        if (saved) {
-            // Record the UUID together with the email binding, so the identity switch
-            // feature can hand out the account's own UUID instead of a regenerated one
-            auth.setUuid(player.getUniqueId());
-            if (!dataSource.updateUuid(auth)) {
-                logger.warning("Could not save UUID for player '" + player.getName() + "'");
-            }
-            playerCache.updatePlayer(auth);
-            pendingEmailChangeCache.remove(playerName);
-            commonService.send(player, MessageKey.EMAIL_CONFIRM_SUCCESS);
+        // Phase 2: code matches — persist the new email.
+        // Database operations are performed asynchronously, as in the other async processes
+        bukkitService.runTaskAsynchronously(() -> {
+            PlayerAuth auth = playerCache.getAuth(playerName);
+            auth.setEmail(pending.getNewEmail());
+            // The password follows the email: if the new email already has a password
+            // (other accounts are bound to it), it is adopted by this account
+            HashedPassword emailPassword = emailPasswordService.findPasswordByEmail(pending.getNewEmail());
+            boolean saved = dataSource.updateEmail(auth);
             if (emailPassword != null) {
-                emailPasswordService.syncPasswordToEmail(pending.getNewEmail(), emailPassword, playerName);
-                commonService.send(player, MessageKey.EMAIL_PASSWORD_ADOPTED);
+                auth.setPassword(emailPassword);
+                saved = saved && dataSource.updatePassword(auth);
             }
-            // 通知其他插件：邮箱绑定确认完成（数据整合插件据此向网站后端同步）
-            Bukkit.getPluginManager().callEvent(new EmailConfirmedEvent(player, pending.getNewEmail()));
-        } else {
-            logger.warning("Could not save email for player '" + player + "'");
-            commonService.send(player, MessageKey.ERROR);
-        }
+            if (saved) {
+                // Record the UUID together with the email binding, so the identity switch
+                // feature can hand out the account's own UUID instead of a regenerated one
+                auth.setUuid(player.getUniqueId());
+                if (!dataSource.updateUuid(auth)) {
+                    logger.warning("Could not save UUID for player '" + player.getName() + "'");
+                }
+                playerCache.updatePlayer(auth);
+                pendingEmailChangeCache.remove(playerName);
+                commonService.send(player, MessageKey.EMAIL_CONFIRM_SUCCESS);
+                if (emailPassword != null) {
+                    emailPasswordService.syncPasswordToEmail(pending.getNewEmail(), emailPassword, playerName);
+                    commonService.send(player, MessageKey.EMAIL_PASSWORD_ADOPTED);
+                }
+                // 通知其他插件：邮箱绑定确认完成（数据整合插件据此向网站后端同步）
+                Bukkit.getPluginManager().callEvent(new EmailConfirmedEvent(player, pending.getNewEmail()));
+            } else {
+                logger.warning("Could not save email for player '" + player + "'");
+                commonService.send(player, MessageKey.ERROR);
+            }
+        });
     }
 
     /**
@@ -159,14 +169,17 @@ public class EmailConfirmCommand extends PlayerCommand {
             return;
         }
 
-        PlayerAuth auth = accountMigrationService.handleMigrationEmailConfirmed(player, pending.getNewEmail());
-        if (auth != null) {
-            // The email already had a password: the migration is complete
-            pendingEmailChangeCache.remove(playerName);
-            // 通知其他插件：邮箱绑定确认完成（数据整合插件据此向网站后端同步）
-            Bukkit.getPluginManager().callEvent(new EmailConfirmedEvent(player, pending.getNewEmail()));
-            asynchronousLogin.performLogin(player, auth);
-        }
+        // Database operations are performed asynchronously, as in the other async processes
+        bukkitService.runTaskAsynchronously(() -> {
+            PlayerAuth auth = accountMigrationService.handleMigrationEmailConfirmed(player, pending.getNewEmail());
+            if (auth != null) {
+                // The email already had a password: the migration is complete
+                pendingEmailChangeCache.remove(playerName);
+                // 通知其他插件：邮箱绑定确认完成（数据整合插件据此向网站后端同步）
+                Bukkit.getPluginManager().callEvent(new EmailConfirmedEvent(player, pending.getNewEmail()));
+                asynchronousLogin.performLogin(player, auth);
+            }
+        });
         // Otherwise the player must still set a new password; the pending email is
         // kept in the cache and the guidance message has already been sent
     }
@@ -193,17 +206,21 @@ public class EmailConfirmCommand extends PlayerCommand {
         }
 
         // The password follows the email: if the email is already in use and has a
-        // password, the new account adopts it instead of asking for a new one
-        HashedPassword emailPassword = emailPasswordService.findPasswordByEmail(pending.getEmail());
-        if (emailPassword != null) {
-            pendingRegistrationCache.remove(playerName);
-            management.performRegister(RegistrationMethod.EMAIL_ADOPT_REGISTRATION,
-                EmailAdoptRegisterParams.of(player, pending.getEmail(), emailPassword));
-            return;
-        }
+        // password, the new account adopts it instead of asking for a new one.
+        // Database operations are performed asynchronously, as in the other async processes
+        bukkitService.runTaskAsynchronously(() -> {
+            HashedPassword emailPassword = emailPasswordService.findPasswordByEmail(pending.getEmail());
+            if (emailPassword != null) {
+                // The pending registration is removed once the adoption has been persisted
+                // (in EmailAdoptRegisterExecutor), so a failed save keeps the confirmed state
+                management.performRegister(RegistrationMethod.EMAIL_ADOPT_REGISTRATION,
+                    EmailAdoptRegisterParams.of(player, pending.getEmail(), emailPassword));
+                return;
+            }
 
-        pending.setVerified(true);
-        commonService.send(player, MessageKey.REGISTER_EMAIL_CONFIRMED);
+            pending.setVerified(true);
+            commonService.send(player, MessageKey.REGISTER_EMAIL_CONFIRMED);
+        });
     }
 
     @Override

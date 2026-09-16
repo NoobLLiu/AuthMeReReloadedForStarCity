@@ -96,16 +96,17 @@ public class EmailService {
      * @param name        the name of the player
      * @param mailAddress the player's email
      * @param code        the verification code
+     * @return true if email could be sent, false otherwise
      */
-    public void sendVerificationMail(String name, String mailAddress, String code, String time) {
+    public boolean sendVerificationMail(String name, String mailAddress, String code, String time) {
         if (!hasAllInformation()) {
             logger.warning("Cannot send verification email: not all email settings are complete");
-            return;
+            return false;
         }
 
         String mailText = replaceTagsForVerificationEmail(settings.getVerificationEmailMessage(), name, code,
             settings.getProperty(SecuritySettings.VERIFICATION_CODE_EXPIRATION_MINUTES), time);
-        mailSender.sendMail(mailAddress, settings.getProperty(EmailSettings.RECOVERY_MAIL_SUBJECT),
+        return mailSender.sendMail(mailAddress, settings.getProperty(EmailSettings.RECOVERY_MAIL_SUBJECT),
             mailText, null);
     }
 
