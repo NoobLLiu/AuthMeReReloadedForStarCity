@@ -40,8 +40,8 @@ public class SyncProcessManager {
         runTask(() -> processSyncEmailRegister.processEmailRegister(player));
     }
 
-    public void processSyncPasswordRegister(Player player) {
-        runTask(() -> processSyncPasswordRegister.processPasswordRegister(player));
+    public void processSyncPasswordRegister(Player player, String email) {
+        runTask(() -> processSyncPasswordRegister.processPasswordRegister(player, email));
     }
 
     public void processSyncPlayerLogout(Player player) {

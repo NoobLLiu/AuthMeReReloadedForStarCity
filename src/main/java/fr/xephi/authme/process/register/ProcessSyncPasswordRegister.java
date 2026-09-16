@@ -64,11 +64,14 @@ public class ProcessSyncPasswordRegister implements SynchronousProcess {
      * Processes a player having registered with a password.
      *
      * @param player the newly registered player
+     * @param email the email address bound to the registration, or null if none
      */
-    public void processPasswordRegister(Player player) {
+    public void processPasswordRegister(Player player, String email) {
         service.send(player, MessageKey.REGISTER_SUCCESS);
 
-        if (!service.getProperty(EmailSettings.MAIL_ACCOUNT).isEmpty()) {
+        // The email hint is only relevant for accounts registered without an email
+        // address; the v2 flow always registers with an email already bound
+        if ((email == null || email.isEmpty()) && !service.getProperty(EmailSettings.MAIL_ACCOUNT).isEmpty()) {
             service.send(player, MessageKey.ADD_EMAIL_MESSAGE);
         }
         velocitySender.sendAuthMeVelocityMessage(player, VMessageType.REGISTER);

@@ -110,6 +110,9 @@ public enum MessageKey {
     /** This email is already bound to existing accounts: once verified, its password will be adopted and no new password is needed. */
     REGISTER_EMAIL_IN_USE_HINT("registration.email_in_use_hint"),
 
+    /** A verification code was already sent to %email: confirm it with /email confirm &lt;code&gt; before setting a password. */
+    REGISTER_VERIFICATION_REQUIRED("registration.verification_required", "%email"),
+
     /** Usage: /unregister &lt;password&gt; */
     USAGE_UNREGISTER("unregister.command_usage"),
 

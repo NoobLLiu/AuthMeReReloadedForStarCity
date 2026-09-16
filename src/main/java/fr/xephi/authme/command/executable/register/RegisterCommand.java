@@ -100,6 +100,11 @@ public class RegisterCommand extends PlayerCommand {
             return;
         }
 
+        if (accountMigrationService.isAwaitingEmailBinding(player)) {
+            commonService.send(player, MessageKey.EMAIL_MIGRATION_REQUIRED);
+            return;
+        }
+
         if (arguments.isEmpty()) {
             commonService.send(player, MessageKey.USAGE_REGISTER);
             return;
@@ -115,7 +120,7 @@ public class RegisterCommand extends PlayerCommand {
             if (arguments.size() == 1 && validationService.validateEmail(arguments.get(0))) {
                 handleEmailPhase(player, arguments);
             } else {
-                commonService.send(player, MessageKey.EMAIL_VERIFICATION_SENT);
+                commonService.send(player, MessageKey.REGISTER_VERIFICATION_REQUIRED, pending.getEmail());
             }
         } else {
             // Phase 2: set the password of the confirmed email address
@@ -171,13 +176,16 @@ public class RegisterCommand extends PlayerCommand {
                 boolean passwordReused = emailPasswordService.findPasswordByEmail(email) != null;
 
                 String code = RandomStringUtils.generateNum(6);
-                pendingRegistrationCache.put(playerName, email, code);
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy'-'MM'-'dd'-' HH:mm:ss");
                 String time = dateFormat.format(new Date(System.currentTimeMillis()));
-                emailService.sendVerificationMail(player.getName(), email, code, time);
-                commonService.send(player, MessageKey.EMAIL_VERIFICATION_SENT);
-                if (passwordReused) {
-                    commonService.send(player, MessageKey.REGISTER_EMAIL_IN_USE_HINT);
+                if (emailService.sendVerificationMail(player.getName(), email, code, time)) {
+                    pendingRegistrationCache.put(playerName, email, code);
+                    commonService.send(player, MessageKey.EMAIL_VERIFICATION_SENT);
+                    if (passwordReused) {
+                        commonService.send(player, MessageKey.REGISTER_EMAIL_IN_USE_HINT);
+                    }
+                } else {
+                    commonService.send(player, MessageKey.EMAIL_SEND_FAILURE);
                 }
             }
         });
@@ -209,7 +217,7 @@ public class RegisterCommand extends PlayerCommand {
         }
 
         PendingRegistrationCache.PendingRegistration pending =
-            pendingRegistrationCache.take(player.getName());
+            pendingRegistrationCache.get(player.getName());
         if (pending == null) {
             commonService.send(player, MessageKey.REGISTER_USAGE_EMAIL);
             return;

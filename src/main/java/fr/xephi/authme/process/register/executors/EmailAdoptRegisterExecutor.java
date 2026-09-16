@@ -6,6 +6,7 @@ import fr.xephi.authme.process.SyncProcessManager;
 import fr.xephi.authme.process.login.AsynchronousLogin;
 import fr.xephi.authme.service.BukkitService;
 import fr.xephi.authme.service.CommonService;
+import fr.xephi.authme.service.PendingRegistrationCache;
 import fr.xephi.authme.settings.properties.PluginSettings;
 import fr.xephi.authme.settings.properties.RegistrationSettings;
 import org.bukkit.entity.Player;
@@ -37,6 +38,9 @@ class EmailAdoptRegisterExecutor implements RegistrationExecutor<EmailAdoptRegis
     @Inject
     private AsynchronousLogin asynchronousLogin;
 
+    @Inject
+    private PendingRegistrationCache pendingRegistrationCache;
+
     @Override
     public boolean isRegistrationAdmitted(EmailAdoptRegisterParams params) {
         // The password comes from the database (already valid), no password validation needed
@@ -63,6 +67,8 @@ class EmailAdoptRegisterExecutor implements RegistrationExecutor<EmailAdoptRegis
                 bukkitService.scheduleSyncDelayedTask(() -> asynchronousLogin.forceLogin(player), SYNC_LOGIN_DELAY);
             }
         }
-        syncProcessManager.processSyncPasswordRegister(player);
+        syncProcessManager.processSyncPasswordRegister(player, params.getEmail());
+        // The account is persisted: the two-phase registration cache entry is no longer needed
+        pendingRegistrationCache.remove(params.getPlayerName());
     }
 }

@@ -14,6 +14,7 @@ registration:
   email_confirmed: '&2Email address confirmed! Now set your password with /register <password> <ConfirmPassword>'
   password_reused: '&2This email address already has a password: your account has been registered with it and you have been logged in automatically. Use the email''s password to log in next time.'
   email_in_use_hint: '&eNote: this email address is already bound to existing accounts. Once you confirm the verification code, its password will be reused — you will not need to set a new one.'
+  verification_required: '&eA verification code was already sent to &a%email&e. Confirm it with &a/email confirm <code> &ebefore setting a password.'
   reg_only: '&4Only registered users can join the server! Please visit https://example.com to register yourself!'
   success: '&2Successfully registered!'
   kicked_admin_registered: 'An admin just registered you; please log in again.'
