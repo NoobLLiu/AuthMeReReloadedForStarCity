@@ -142,10 +142,10 @@ captcha:
 
 # Verification code
 verification:
-  code_required: '&3This command is sensitive and requires an email verification! Check your inbox and follow the email''s instructions.'
+  code_required: '&3This command is sensitive and requires an email verification! Check your inbox and confirm with "/email confirm <code>" or "/verification <code>".'
   command_usage: '&cUsage: /verification <code>'
   incorrect_code: '&cIncorrect code, please type "/verification <code>" into the chat, using the code you received by email'
-  success: '&2Your identity has been verified! You can now execute all commands within the current session!'
+  success: '&2Your identity has been verified! Now execute the sensitive command again, e.g. "/unregister <password>".'
   already_verified: '&2You can already execute every sensitive command within the current session!'
   code_expired: '&3Your code has expired! Execute another sensitive command to get a new code!'
   email_needed: '&3To verify your identity you need to link an email address with your account!!'

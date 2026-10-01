@@ -150,10 +150,10 @@ captcha:
 
 # Verification code
 verification:
-    code_required: '&a*** 已发送验证邮件 ***'
+    code_required: '&a*** 已发送验证邮件 ***&e 请输入 &a/email confirm <验证码>&e 完成验证后，再重新执行刚才的操作'
     command_usage: '&c使用方法:/verification <验证码>'
     incorrect_code: '&c错误的验证码.'
-    success: '&a*** 验证通过 ***'
+    success: '&a*** 验证通过 ***&e 请重新执行刚才的操作（如 /unregister <密码>）'
     already_verified: '&a您已经通过验证'
     code_expired: '&c验证码已失效'
     email_needed: '&c邮箱未绑定'

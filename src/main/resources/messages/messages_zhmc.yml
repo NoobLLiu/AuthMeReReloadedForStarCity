@@ -141,10 +141,10 @@ captcha:
 
 # Verification code
 verification:
-    code_required: '&a*** 已發送驗證郵件 ***'
+    code_required: '&a*** 已發送驗證郵件 ***&e 請輸入 &a/email confirm <驗證碼>&e 完成驗證後，再重新執行剛才的操作'
     command_usage: '&c使用方法:/verification <驗證碼>'
     incorrect_code: '&c錯誤的驗證碼.'
-    success: '&a*** 驗證通過 ***'
+    success: '&a*** 驗證通過 ***&e 請重新執行剛才的操作（如 /unregister <密碼>）'
     already_verified: '&a您已經通過驗證'
     code_expired: '&c驗證碼已失效'
     email_needed: '&c郵箱未綁定'
