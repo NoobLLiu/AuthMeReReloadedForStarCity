@@ -59,6 +59,7 @@ antibot:
 unregister:
     success: '&c帳戶已刪除!'
     command_usage: '&c使用方法: "/unregister <你的密碼>"'
+    disabled: '&c已停用玩家自行註銷功能，如需註銷請聯絡管理員。'
 
 # Other messages
 misc:

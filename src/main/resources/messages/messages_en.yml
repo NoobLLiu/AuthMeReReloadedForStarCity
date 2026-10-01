@@ -60,6 +60,7 @@ antibot:
 unregister:
   success: '&cSuccessfully unregistered!'
   command_usage: '&cUsage: /unregister <password>'
+  disabled: '&cSelf-unregistration is disabled. Please contact an administrator to unregister your account.'
 
 # Other messages
 misc:

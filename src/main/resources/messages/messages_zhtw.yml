@@ -62,6 +62,7 @@ antibot:
 unregister:
     success: '&b【AuthMe】&6您已經成功註銷。'
     command_usage: '&b【AuthMe】&6用法：&c"/unregister <密碼>"'
+    disabled: '&b【AuthMe】&c已停用玩家自行註銷功能，如需註銷請聯絡管理員。'
 
 # Other messages
 misc:

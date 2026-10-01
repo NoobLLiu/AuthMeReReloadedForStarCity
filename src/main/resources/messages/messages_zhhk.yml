@@ -63,6 +63,7 @@ antibot:
 unregister:
     success: '&8[&6用戶系統&8] &c已成功刪除會員註冊記錄。'
     command_usage: '&8[&6用戶系統&8] &f用法：《 /unregister <密碼> 》'
+    disabled: '&8[&6用戶系統&8] &c已停用玩家自行註銷功能，如需註銷請聯絡管理員。'
 
 # Other messages
 misc:

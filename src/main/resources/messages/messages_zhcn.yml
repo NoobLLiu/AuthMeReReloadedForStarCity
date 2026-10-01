@@ -60,6 +60,7 @@ antibot:
 unregister:
     success: '&a*** 已成功注销 ***'
     command_usage: '&c正确用法:“/unregister <密码>”'
+    disabled: '&c已停用玩家自助注销功能，如需注销请联系管理员。'
 
 # Other messages
 misc:
