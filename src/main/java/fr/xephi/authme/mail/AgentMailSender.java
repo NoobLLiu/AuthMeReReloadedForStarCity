@@ -43,6 +43,21 @@ public class AgentMailSender implements MailSender {
     /** Pattern to detect "ok": true in JSON output. */
     private static final Pattern OK_PATTERN =
         Pattern.compile("\"ok\"\\s*:\\s*true");
+    /** Pattern to detect the CLI's token-storage lock error. */
+    private static final Pattern LOCK_ERROR_PATTERN =
+        Pattern.compile("credential_lock_unavailable|token storage lock", Pattern.CASE_INSENSITIVE);
+    /** Total attempts made when the CLI's token-storage lock is unavailable. */
+    private static final int MAX_LOCK_ATTEMPTS = 3;
+    /** Delay between lock-retry attempts in milliseconds. */
+    private static final long LOCK_RETRY_DELAY_MS = 2000L;
+
+    /**
+     * Guards all CLI invocations. The CLI holds an exclusive lock on its token
+     * storage, so concurrent sends (e.g. two players requesting a code at the
+     * same time) would fight over that lock and fail with
+     * {@code credential_lock_unavailable}. Serializing CLI usage avoids this.
+     */
+    private static final Object CLI_LOCK = new Object();
 
     @Inject
     private Settings settings;
@@ -88,58 +103,60 @@ public class AgentMailSender implements MailSender {
             // Build the base command (without confirmation token)
             List<String> baseCommand = buildSendCommand(cliPath, recipient, subject, bodyFile, imageFile);
 
-            // Phase 1: send request to get confirmation token
-            String phase1Output = runCliCommand(baseCommand, timeoutSeconds);
-            if (phase1Output == null) {
-                return false;
-            }
-            logger.info("AgentMailSender phase1 output: " + phase1Output.trim());
+            synchronized (CLI_LOCK) {
+                // Phase 1: send request to get confirmation token
+                String phase1Output = runCliCommandWithLockRetry(baseCommand, timeoutSeconds);
+                if (phase1Output == null) {
+                    return false;
+                }
+                logger.info("AgentMailSender phase1 output: " + phase1Output.trim());
 
-            String token = extractToken(phase1Output);
-            if (token == null) {
-                // No token returned — only treat as success if there's no confirmation_required
-                // and no error. The Phase 1 response always has "ok": true even when it
-                // requires confirmation, so "ok": true alone is NOT a success signal.
-                if (!phase1Output.contains("\"confirmation_required\"")
-                        && !phase1Output.contains("\"error\"")
-                        && OK_PATTERN.matcher(phase1Output).find()) {
-                    logger.info("agently-cli sent mail to " + recipient + " without confirmation");
+                String token = extractToken(phase1Output);
+                if (token == null) {
+                    // No token returned — only treat as success if there's no confirmation_required
+                    // and no error. The Phase 1 response always has "ok": true even when it
+                    // requires confirmation, so "ok": true alone is NOT a success signal.
+                    if (!phase1Output.contains("\"confirmation_required\"")
+                            && !phase1Output.contains("\"error\"")
+                            && OK_PATTERN.matcher(phase1Output).find()) {
+                        logger.info("agently-cli sent mail to " + recipient + " without confirmation");
+                        return true;
+                    }
+                    logger.warning("agently-cli did not return a confirmation token. Output: " + phase1Output);
+                    if (looksLikeAuthError(phase1Output)) {
+                        logger.warning("Agent Mail CLI may not be authorized. Run 'agently-cli auth login' "
+                            + "and complete the WeChat OAuth flow on the server host.");
+                    }
+                    return false;
+                }
+                logger.info("AgentMailSender got confirmation token: " + token);
+
+                // Phase 2: confirm and send with the token
+                List<String> confirmCommand = new ArrayList<>(baseCommand);
+                confirmCommand.add("--confirmation-token");
+                confirmCommand.add(token);
+
+                String phase2Output = runCliCommandWithLockRetry(confirmCommand, timeoutSeconds);
+                if (phase2Output == null) {
+                    return false;
+                }
+                logger.info("AgentMailSender phase2 output: " + phase2Output.trim());
+
+                if (QUEUED_PATTERN.matcher(phase2Output).find()) {
+                    logger.info("AgentMailSender: mail queued successfully to " + recipient);
                     return true;
                 }
-                logger.warning("agently-cli did not return a confirmation token. Output: " + phase1Output);
-                if (looksLikeAuthError(phase1Output)) {
-                    logger.warning("Agent Mail CLI may not be authorized. Run 'agently-cli auth login' "
-                        + "and complete the WeChat OAuth flow on the server host.");
+                // "ok": true with no confirmation_required and no error = success
+                if (OK_PATTERN.matcher(phase2Output).find()
+                        && !phase2Output.contains("\"confirmation_required\"")
+                        && !phase2Output.contains("\"error\"")) {
+                    logger.info("AgentMailSender: mail sent successfully to " + recipient);
+                    return true;
                 }
+
+                logger.warning("agently-cli confirmation phase did not complete. Output: " + phase2Output);
                 return false;
             }
-            logger.info("AgentMailSender got confirmation token: " + token);
-
-            // Phase 2: confirm and send with the token
-            List<String> confirmCommand = new ArrayList<>(baseCommand);
-            confirmCommand.add("--confirmation-token");
-            confirmCommand.add(token);
-
-            String phase2Output = runCliCommand(confirmCommand, timeoutSeconds);
-            if (phase2Output == null) {
-                return false;
-            }
-            logger.info("AgentMailSender phase2 output: " + phase2Output.trim());
-
-            if (QUEUED_PATTERN.matcher(phase2Output).find()) {
-                logger.info("AgentMailSender: mail queued successfully to " + recipient);
-                return true;
-            }
-            // "ok": true with no confirmation_required and no error = success
-            if (OK_PATTERN.matcher(phase2Output).find()
-                    && !phase2Output.contains("\"confirmation_required\"")
-                    && !phase2Output.contains("\"error\"")) {
-                logger.info("AgentMailSender: mail sent successfully to " + recipient);
-                return true;
-            }
-
-            logger.warning("agently-cli confirmation phase did not complete. Output: " + phase2Output);
-            return false;
         } catch (Exception e) {
             logger.logException("Failed to send via agently-cli:", e);
             return false;
@@ -211,34 +228,88 @@ public class AgentMailSender implements MailSender {
     }
 
     /**
-     * Runs the CLI command and returns its stdout output, or null on failure.
+     * Runs the CLI command, retrying briefly when the CLI's token-storage lock
+     * is unavailable (e.g. an orphaned CLI process from a previous killed run,
+     * or a short-lived stale lock). Returns the last output on persistent
+     * lock errors so callers can log the CLI's own error details.
+     */
+    private String runCliCommandWithLockRetry(List<String> command, int timeoutSeconds) {
+        String output = runCliCommand(command, timeoutSeconds);
+        for (int attempt = 2; output != null && isLockError(output) && attempt <= MAX_LOCK_ATTEMPTS; attempt++) {
+            logger.warning("agently-cli token storage lock unavailable, retrying (attempt "
+                + attempt + "/" + MAX_LOCK_ATTEMPTS + ") in " + LOCK_RETRY_DELAY_MS + "ms ...");
+            try {
+                Thread.sleep(LOCK_RETRY_DELAY_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+            output = runCliCommand(command, timeoutSeconds);
+        }
+        if (isLockError(output)) {
+            logger.warning("agently-cli could not acquire its token storage lock. AuthMe serializes its "
+                + "own sends, so the lock is held by something outside this plugin: check the server "
+                + "host for leftover node/agently-cli processes (e.g. killed by a previous timeout or "
+                + "server shutdown leaving a stale lock), remove the stale lock file in the CLI's "
+                + "storage directory if present, then retry.");
+        }
+        return output;
+    }
+
+    private static boolean isLockError(String output) {
+        return output != null && LOCK_ERROR_PATTERN.matcher(output).find();
+    }
+
+    /**
+     * Runs the CLI command and returns its combined stdout/stderr output.
+     * Returns {@code null} only if the process could not be started or was
+     * killed after exceeding the timeout; the output is returned even when the
+     * CLI exits with a non-zero code so callers can inspect the error details.
      */
     private String runCliCommand(List<String> command, int timeoutSeconds) {
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);
         Process process = null;
+        StringBuilder output = new StringBuilder();
+        Thread readerThread = null;
         try {
             process = pb.start();
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append('\n');
+            final Process proc = process;
+            // Drain the output on a separate thread so waitFor(timeout) below
+            // is actually reached even when the CLI hangs without closing stdout.
+            readerThread = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        synchronized (output) {
+                            output.append(line).append('\n');
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // stream closed when the process is destroyed
                 }
-            }
-            boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
-            if (!finished) {
+            });
+            readerThread.setDaemon(true);
+            readerThread.start();
+
+            if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
+                process.waitFor(5, TimeUnit.SECONDS);
                 logger.warning("agently-cli timed out after " + timeoutSeconds + "s");
                 return null;
             }
+            // Give the reader thread a moment to drain the tail of the stream.
+            readerThread.join(TimeUnit.SECONDS.toMillis(2));
+            String result;
+            synchronized (output) {
+                result = output.toString();
+            }
             if (process.exitValue() != 0) {
                 logger.warning("agently-cli exited with code " + process.exitValue()
-                    + ". Output: " + output);
-                return null;
+                    + ". Output: " + result);
             }
-            return output.toString();
+            return result;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             if (process != null) {
