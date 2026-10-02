@@ -79,6 +79,10 @@ public class AgentMailSender implements MailSender {
         // automatically. If the cliPath is a bare name (no path separator, no extension),
         // try appending ".cmd" to locate the npm-generated wrapper.
         cliPath = resolveWindowsCommand(cliPath);
+        // Prefer the native CLI binary over the node run.js launcher: run.js starts the
+        // real CLI as a child process, which destroyForcibly() cannot kill on timeout,
+        // leaving an orphaned CLI process that keeps holding the CLI's token lock.
+        cliPath = preferNativeBinary(cliPath);
         logger.info("AgentMailSender: using cliPath=" + cliPath + " for recipient=" + recipient);
 
         // Write the body to a temp file and use --body-file. This is the CLI's
@@ -248,10 +252,11 @@ public class AgentMailSender implements MailSender {
         }
         if (isLockError(output)) {
             logger.warning("agently-cli could not acquire its token storage lock. AuthMe serializes its "
-                + "own sends, so the lock is held by something outside this plugin: check the server "
-                + "host for leftover node/agently-cli processes (e.g. killed by a previous timeout or "
-                + "server shutdown leaving a stale lock), remove the stale lock file in the CLI's "
-                + "storage directory if present, then retry.");
+                + "own sends, so the lock is held by another live process on this host: check for "
+                + "leftover agently-cli/node processes (e.g. left behind by a previous timeout or "
+                + "server shutdown) and end them, then retry. Note: a leftover lock file itself is "
+                + "harmless; the CLI locks via the OS and the lock is released automatically when "
+                + "its holder exits, so deleting files cannot help.");
         }
         return output;
     }
@@ -411,6 +416,71 @@ public class AgentMailSender implements MailSender {
             }
         } catch (Exception e) {
             // Ignore — fall back to using the .cmd file directly
+        }
+        return null;
+    }
+
+    /**
+     * Replaces a command that routes through the {@code run.js} launcher with the
+     * platform-native CLI binary when it can be located. {@code run.js} starts the
+     * real CLI binary as a child process (via {@code execFileSync}); when a send is
+     * killed on timeout, {@code destroyForcibly()} only terminates the direct child
+     * (node), leaving an orphaned {@code agently-cli} process behind — still holding
+     * the CLI's token storage lock and breaking every later send with
+     * {@code credential_lock_unavailable}. Launching the native binary directly
+     * removes that extra process layer so the kill reaches the lock holder.
+     *
+     * @param cliPath the resolved CLI command
+     * @return the native binary path if available, otherwise the original command
+     */
+    private static String preferNativeBinary(String cliPath) {
+        String runJsPath = null;
+        if (cliPath.startsWith("node ")) {
+            String rest = cliPath.substring("node ".length()).trim();
+            if (rest.length() >= 2 && rest.charAt(0) == '"' && rest.charAt(rest.length() - 1) == '"') {
+                rest = rest.substring(1, rest.length() - 1);
+            }
+            runJsPath = rest;
+        } else if (cliPath.endsWith("run.js")) {
+            runJsPath = cliPath;
+        }
+        if (runJsPath == null) {
+            return cliPath;
+        }
+        String nativeBin = resolveNativeBinaryFromRunJs(runJsPath);
+        return nativeBin != null ? nativeBin : cliPath;
+    }
+
+    /**
+     * Locates the platform-specific CLI binary installed as an optional dependency
+     * next to the {@code agently-cli} package, e.g.
+     * {@code node_modules/@tencent-qqmail/agently-cli-win32-x64/bin/agently-cli.exe}.
+     *
+     * @param runJsPath path of the {@code run.js} launcher script
+     * @return the native binary path, or null when it cannot be located
+     */
+    private static String resolveNativeBinaryFromRunJs(String runJsPath) {
+        File scriptsDir = new File(runJsPath).getAbsoluteFile().getParentFile();
+        File mainPkgDir = scriptsDir == null ? null : scriptsDir.getParentFile();
+        File scopeDir = mainPkgDir == null ? null : mainPkgDir.getParentFile();
+        if (scopeDir == null) {
+            return null;
+        }
+        boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        String binaryName = "agently-cli" + (windows ? ".exe" : "");
+        String jvmArch = System.getProperty("os.arch", "").toLowerCase();
+        String[] npmArches = jvmArch.contains("aarch64") || jvmArch.contains("arm64")
+            ? new String[] {"arm64", "x64"} : new String[] {"x64", "arm64"};
+        File[] searchRoots = {scopeDir,
+            new File(mainPkgDir, "node_modules" + File.separator + "@tencent-qqmail")};
+        for (File searchRoot : searchRoots) {
+            for (String npmArch : npmArches) {
+                File binary = new File(searchRoot, "agently-cli-" + npmArch
+                    + File.separator + "bin" + File.separator + binaryName);
+                if (binary.isFile()) {
+                    return binary.getAbsolutePath();
+                }
+            }
         }
         return null;
     }
