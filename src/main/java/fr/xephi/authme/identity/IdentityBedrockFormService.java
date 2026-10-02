@@ -211,6 +211,9 @@ public class IdentityBedrockFormService {
         if (accounts.isEmpty()) {
             sb.append('\n').append(ChatColor.RED)
                 .append(messages.retrieveSingle(player, MessageKey.IDENTITY_MENU_NO_OTHER_ACCOUNTS));
+        } else {
+            sb.append('\n')
+                .append(messages.retrieveSingle(player, MessageKey.IDENTITY_FORM_CHOOSE));
         }
         return sb.toString();
     }

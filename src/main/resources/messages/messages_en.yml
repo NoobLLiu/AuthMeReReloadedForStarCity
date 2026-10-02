@@ -203,6 +203,7 @@ identity:
   lore_page_next: 'Next page'
   lore_close: 'Close'
   form_page: '&7Page %current% of %total%'
+  form_choose: '&eChoose the identity to switch to:'
   switch_success_kick: '&aIdentity switch successful, please rejoin the server'
   switch_self: '&cYou are already using this identity'
   not_bound: '&cYou must have an email address bound to your account to switch identities'
