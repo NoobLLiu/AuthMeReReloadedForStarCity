@@ -9,6 +9,7 @@ The following are the permission nodes that are currently supported by the lates
 - **authme.admin.antibotmessages** – Permission to see Antibot messages.
 - **authme.admin.backup** – Allows to use the backup command.
 - **authme.admin.changemail** – Administrator command to set or change the email address of a user.
+- **authme.admin.emailchange** – Administrator command to manage the email address of a user (view, set or delete) and the accounts bound to an email address.
 - **authme.admin.changepassword** – Administrator command to change the password of a user.
 - **authme.admin.converter** – Administrator command to convert old or other data to AuthMe data.
 - **authme.admin.firstspawn** – Administrator command to teleport to the first AuthMe spawn.

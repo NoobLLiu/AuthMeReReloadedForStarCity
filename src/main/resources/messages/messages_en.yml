@@ -120,6 +120,16 @@ email:
   send_failure: 'The email could not be sent. Please contact an administrator.'
   change_password_expired: 'You cannot change your password using this command anymore.'
   email_cooldown_error: '&cAn email was already sent recently. You must wait %time before you can send a new one.'
+  usage_emailchange: '&cUsage: /authme emailchange view|set|delete <player> [email] / accounts <email> / deleteaccount <player>'
+  admin_email_show: '&2Email bound to &f%player&2: &f%email'
+  admin_email_show_empty: '&eNo email is bound to the account of &f%player&e.'
+  admin_email_set: '&2Email of &f%player&2 has been set to &f%email&2.'
+  admin_email_deleted: '&2Email binding of &f%player&2 has been removed.'
+  admin_accounts_header: '&2Accounts bound to &f%email&2: &f%count'
+  admin_accounts_entry: ' &8- &f%player'
+  admin_accounts_empty: '&eNo accounts are bound to &f%email&e.'
+  admin_email_set_notify: '&eYour email address has been updated by an administrator to: &f%email'
+  admin_email_delete_notify: '&eAn administrator has removed the email binding of your account. Please bind an email before playing.'
 
 # Password recovery by email
 recovery:

@@ -98,6 +98,7 @@ permissions:
       authme.admin.changemail: true
       authme.admin.changepassword: true
       authme.admin.converter: true
+      authme.admin.emailchange: true
       authme.admin.firstspawn: true
       authme.admin.forcelogin: true
       authme.admin.getemail: true
@@ -136,6 +137,9 @@ permissions:
     default: op
   authme.admin.converter:
     description: Administrator command to convert old or other data to AuthMe data.
+    default: op
+  authme.admin.emailchange:
+    description: Administrator command to manage the email address of a user and the accounts bound to an email address.
     default: op
   authme.admin.firstspawn:
     description: Administrator command to teleport to the first AuthMe spawn.

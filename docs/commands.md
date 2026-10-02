@@ -22,6 +22,8 @@ brackets; optional arguments are enclosed in square brackets (`[ ]`).
   <br />Requires `authme.admin.getemail`
 - **/authme setemail** &lt;player> &lt;email>: Change the email address of the specified player.
   <br />Requires `authme.admin.changemail`
+- **/authme emailchange** view|set|delete &lt;player> [email] / accounts &lt;email> / deleteaccount &lt;player>: Manage the email address bound to a player's account (view, set or delete it), or the accounts bound to an email address (list them via `accounts`, then unregister a specific account with `deleteaccount`).
+  <br />Requires `authme.admin.emailchange`
 - **/authme getip** &lt;player>: Get the IP address of the specified online player.
   <br />Requires `authme.admin.getip`
 - **/authme totp** &lt;player>: Returns whether the specified player has enabled two-factor authentication.

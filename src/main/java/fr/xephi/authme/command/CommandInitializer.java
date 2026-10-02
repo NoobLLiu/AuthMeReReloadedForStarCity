@@ -7,6 +7,7 @@ import fr.xephi.authme.command.executable.authme.AuthMeCommand;
 import fr.xephi.authme.command.executable.authme.BackupCommand;
 import fr.xephi.authme.command.executable.authme.ChangePasswordAdminCommand;
 import fr.xephi.authme.command.executable.authme.ConverterCommand;
+import fr.xephi.authme.command.executable.authme.EmailChangeCommand;
 import fr.xephi.authme.command.executable.authme.FirstSpawnCommand;
 import fr.xephi.authme.command.executable.authme.ForceLoginCommand;
 import fr.xephi.authme.command.executable.authme.GetEmailCommand;
@@ -298,6 +299,23 @@ public class CommandInitializer {
             .withArgument("email", "Player email", MANDATORY)
             .permission(AdminPermission.CHANGE_EMAIL)
             .executableCommand(SetEmailCommand.class)
+            .register();
+
+        // Register the emailchange command
+        CommandDescription.builder()
+            .parent(authmeBase)
+            .labels("emailchange", "emailchg", "ec")
+            .description("Manage players' bound emails")
+            .detailedDescription("Manage the email address bound to a player's account, or the accounts "
+                + "bound to an email address. Subcommands: view <player> to view the bound email; "
+                + "set <player> <email> to change it; delete <player> to remove it; accounts <email> "
+                + "to list all accounts bound to an email; deleteaccount <player> to unregister an "
+                + "account (e.g. one found via accounts).")
+            .withArgument("subcommand", "view / set / delete / accounts / deleteaccount", OPTIONAL)
+            .withArgument("player", "Player name (view/set/delete/deleteaccount)", OPTIONAL)
+            .withArgument("email", "Email address (accounts) or new email (set)", OPTIONAL)
+            .permission(AdminPermission.EMAIL_CHANGE)
+            .executableCommand(EmailChangeCommand.class)
             .register();
 
         // Register the getip command
