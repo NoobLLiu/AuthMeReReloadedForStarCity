@@ -10,6 +10,7 @@ import fr.xephi.authme.command.CommandHandler;
 import fr.xephi.authme.command.TabCompleteHandler;
 import fr.xephi.authme.datasource.DataSource;
 import fr.xephi.authme.geyser.FloodgateIdentityHook;
+import fr.xephi.authme.identity.IdentityBedrockFormService;
 import fr.xephi.authme.identity.IdentityMenuService;
 import fr.xephi.authme.identity.IdentitySwitchManager;
 import fr.xephi.authme.initialization.DataFolder;
@@ -320,6 +321,7 @@ public class AuthMe extends JavaPlugin {
         injector.getSingleton(VelocityReceiver.class);
         injector.getSingleton(IdentitySwitchManager.class);
         injector.getSingleton(IdentityMenuService.class);
+        injector.getSingleton(IdentityBedrockFormService.class);
 
         // Trigger construction of API classes; they will keep track of the singleton
         injector.getSingleton(AuthMeApi.class);

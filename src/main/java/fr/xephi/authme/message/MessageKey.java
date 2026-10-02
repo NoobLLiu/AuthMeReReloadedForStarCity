@@ -449,6 +449,12 @@ public enum MessageKey {
     /** Identity menu lore: close the menu. */
     IDENTITY_LORE_CLOSE("identity.lore_close"),
 
+    /** Identity menu Bedrock form: the page indicator. */
+    IDENTITY_FORM_PAGE("identity.form_page", "%current%", "%total%"),
+
+    /** Identity menu Bedrock form: prompt before the switchable account buttons. */
+    IDENTITY_FORM_CHOOSE("identity.form_choose"),
+
     /** Switch successful, please rejoin the server. */
     IDENTITY_SWITCH_SUCCESS_KICK("identity.switch_success_kick"),
 

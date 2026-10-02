@@ -410,11 +410,12 @@ public class IdentitySwitchManager {
 
     /**
      * Returns whether the given player is a Bedrock player connected through Geyser+Floodgate.
+     * Safe to call even when Floodgate is not installed: falls back to {@code false}.
      *
      * @param player the player to check
      * @return true if the player is a Bedrock player
      */
-    private boolean isBedrockPlayer(Player player) {
+    public static boolean isBedrockPlayer(Player player) {
         try {
             if (Bukkit.getPluginManager().getPlugin("floodgate") == null) {
                 return false;
