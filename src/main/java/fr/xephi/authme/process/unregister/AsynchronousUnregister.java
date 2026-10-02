@@ -1,6 +1,7 @@
 package fr.xephi.authme.process.unregister;
 
 import fr.xephi.authme.ConsoleLogger;
+import fr.xephi.authme.data.VerificationCodeManager;
 import fr.xephi.authme.data.auth.PlayerAuth;
 import fr.xephi.authme.data.auth.PlayerCache;
 import fr.xephi.authme.data.limbo.LimboService;
@@ -49,6 +50,9 @@ public class AsynchronousUnregister implements AsynchronousProcess {
 
     @Inject
     private LimboService limboService;
+
+    @Inject
+    private VerificationCodeManager codeManager;
 
     @Inject
     private TeleportationService teleportationService;
@@ -121,6 +125,10 @@ public class AsynchronousUnregister implements AsynchronousProcess {
      * @param player the according Player object (nullable)
      */
     private void performPostUnregisterActions(String name, Player player) {
+        // The account is gone: revoke the email verification so a re-registered
+        // account (same online session) cannot skip the verification again
+        codeManager.clearVerification(name);
+
         if (player != null && playerCache.isAuthenticated(name)) {
             bungeeSender.sendAuthMeBungeecordMessage(player, MessageType.LOGOUT);
         }

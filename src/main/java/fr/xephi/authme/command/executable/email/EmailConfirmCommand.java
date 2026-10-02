@@ -2,6 +2,7 @@ package fr.xephi.authme.command.executable.email;
 
 import fr.xephi.authme.ConsoleLogger;
 import fr.xephi.authme.command.PlayerCommand;
+import fr.xephi.authme.data.VerificationCodeManager;
 import fr.xephi.authme.data.auth.PlayerAuth;
 import fr.xephi.authme.data.auth.PlayerCache;
 import fr.xephi.authme.datasource.DataSource;
@@ -34,6 +35,10 @@ import java.util.Locale;
  * received by email; if it matches the cached pending change, the new email
  * is persisted to the database.</p>
  *
+ * <p>For authenticated players this command also accepts the sensitive-operation
+ * verification code (unregister, change password), matching the instruction in the
+ * verification email.</p>
+ *
  * <p>For unauthenticated players this command additionally handles two flows:
  * the email binding of a v1 account pending migration, and the email
  * confirmation step of the two-phase v2 registration.</p>
@@ -50,6 +55,9 @@ public class EmailConfirmCommand extends PlayerCommand {
 
     @Inject
     private PendingRegistrationCache pendingRegistrationCache;
+
+    @Inject
+    private VerificationCodeManager codeManager;
 
     @Inject
     private AccountMigrationService accountMigrationService;
@@ -101,7 +109,17 @@ public class EmailConfirmCommand extends PlayerCommand {
 
         PendingEmailChangeCache.PendingEmailChange pending = pendingEmailChangeCache.get(playerName);
         if (pending == null) {
-            commonService.send(player, MessageKey.EMAIL_NO_PENDING_CHANGE);
+            // Sensitive-operation verification code (e.g. unregister, change password):
+            // the verification email instructs "/email confirm <code>", so confirm it here too
+            if (codeManager.isCodeRequired(playerName)) {
+                if (codeManager.checkCode(playerName, arguments.get(0))) {
+                    commonService.send(player, MessageKey.VERIFICATION_CODE_VERIFIED);
+                } else {
+                    commonService.send(player, MessageKey.INCORRECT_VERIFICATION_CODE);
+                }
+            } else {
+                commonService.send(player, MessageKey.EMAIL_NO_PENDING_CHANGE);
+            }
             return;
         }
 

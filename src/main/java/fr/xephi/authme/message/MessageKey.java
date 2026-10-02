@@ -62,6 +62,9 @@ public enum MessageKey {
     /** Successfully unregistered! */
     UNREGISTERED_SUCCESS("unregister.success"),
 
+    /** In-game self-unregistration is disabled! */
+    UNREGISTER_DISABLED("unregister.disabled"),
+
     /** In-game registration is disabled! */
     REGISTRATION_DISABLED("registration.disabled"),
 

@@ -159,7 +159,9 @@ public class VerificationCodeManager implements SettingsDependent, HasCleanup {
      */
     public boolean checkCode(String name, String code) {
         boolean correct = false;
-        if (code.equals(verificationCodes.get(name.toLowerCase(Locale.ROOT)))) {
+        String nameLower = name.toLowerCase(Locale.ROOT);
+        if (code.equals(verificationCodes.get(nameLower))) {
+            verificationCodes.remove(nameLower);
             verify(name);
             correct = true;
         }
@@ -182,6 +184,19 @@ public class VerificationCodeManager implements SettingsDependent, HasCleanup {
      */
     public void unverify(String name){
         verifiedPlayers.remove(name.toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * Clears all verification state of the player: the verified flag and any
+     * pending verification code. Used when the account is unregistered, so a
+     * re-registered account cannot skip the email verification.
+     *
+     * @param name the name of the player
+     */
+    public void clearVerification(String name) {
+        String nameLower = name.toLowerCase(Locale.ROOT);
+        verificationCodes.remove(nameLower);
+        verifiedPlayers.remove(nameLower);
     }
 
     @Override

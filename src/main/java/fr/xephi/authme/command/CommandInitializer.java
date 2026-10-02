@@ -126,12 +126,13 @@ public class CommandInitializer {
             .register();
 
         // Register the base unregister command
+        // (player self-unregistration is disabled; admins use /authme unregister <player>)
         CommandDescription unregisterBase = CommandDescription.builder()
             .parent(null)
             .labels("unregister", "unreg")
-            .description("Unregister an account")
-            .detailedDescription("Command to unregister using AuthMeReloaded.")
-            .withArgument("password", "Password", MANDATORY)
+            .description("Unregister an account (disabled: contact an administrator)")
+            .detailedDescription("Player self-unregistration is disabled. Contact an administrator "
+                + "to unregister an account. Administrators can use /authme unregister <player>.")
             .permission(PlayerPermission.UNREGISTER)
             .executableCommand(UnregisterCommand.class)
             .register();
