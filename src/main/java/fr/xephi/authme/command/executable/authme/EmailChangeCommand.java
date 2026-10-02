@@ -2,14 +2,26 @@ package fr.xephi.authme.command.executable.authme;
 
 import ch.jalu.datasourcecolumns.data.DataSourceValue;
 import fr.xephi.authme.command.ExecutableCommand;
+import fr.xephi.authme.data.VerificationCodeManager;
 import fr.xephi.authme.data.auth.PlayerAuth;
 import fr.xephi.authme.data.auth.PlayerCache;
 import fr.xephi.authme.datasource.DataSource;
+import fr.xephi.authme.events.EmailConfirmedEvent;
 import fr.xephi.authme.message.MessageKey;
 import fr.xephi.authme.process.Management;
+import fr.xephi.authme.process.login.AsynchronousLogin;
+import fr.xephi.authme.security.crypts.HashedPassword;
+import fr.xephi.authme.service.AccountMigrationService;
 import fr.xephi.authme.service.BukkitService;
 import fr.xephi.authme.service.CommonService;
+import fr.xephi.authme.service.EmailPasswordService;
+import fr.xephi.authme.service.PendingEmailChangeCache;
+import fr.xephi.authme.service.SessionService;
 import fr.xephi.authme.service.ValidationService;
+import fr.xephi.authme.service.bungeecord.BungeeSender;
+import fr.xephi.authme.service.bungeecord.MessageType;
+import fr.xephi.authme.service.velocity.VMessageType;
+import fr.xephi.authme.service.velocity.VelocitySender;
 import fr.xephi.authme.util.Utils;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -41,6 +53,30 @@ public class EmailChangeCommand implements ExecutableCommand {
 
     @Inject
     private ValidationService validationService;
+
+    @Inject
+    private AccountMigrationService accountMigrationService;
+
+    @Inject
+    private EmailPasswordService emailPasswordService;
+
+    @Inject
+    private PendingEmailChangeCache pendingEmailChangeCache;
+
+    @Inject
+    private SessionService sessionService;
+
+    @Inject
+    private VerificationCodeManager codeManager;
+
+    @Inject
+    private AsynchronousLogin asynchronousLogin;
+
+    @Inject
+    private BungeeSender bungeeSender;
+
+    @Inject
+    private VelocitySender velocitySender;
 
     EmailChangeCommand() {
     }
@@ -101,7 +137,9 @@ public class EmailChangeCommand implements ExecutableCommand {
     }
 
     /**
-     * Sets the email address bound to the given player's account.
+     * Sets the email address bound to the given player's account. The account is considered
+     * migrated to the current schema version after an administrator has set the email. An
+     * online player is notified in real time and released from the migration process if needed.
      *
      * @param sender the command sender
      * @param arguments the command arguments
@@ -129,21 +167,53 @@ public class EmailChangeCommand implements ExecutableCommand {
                 return;
             }
 
+            // 管理员设置的邮箱视为完成 v2 迁移：绑定邮箱并推进 schema 版本
             auth.setEmail(newEmail);
-            if (!dataSource.updateEmail(auth)) {
+            auth.setSchemaVersion(AccountMigrationService.TARGET_SCHEMA_VERSION);
+            if (!dataSource.updateEmail(auth) || !dataSource.updateSchemaVersion(auth)) {
                 commonService.send(sender, MessageKey.ERROR);
                 return;
             }
 
+            // 密码跟随邮箱：该邮箱已有其他账号绑定时，采用其现有密码并同步给同邮箱账号
+            boolean passwordAdopted = false;
+            HashedPassword emailPassword = emailPasswordService.findPasswordByEmail(newEmail);
+            if (emailPassword != null) {
+                auth.setPassword(emailPassword);
+                if (dataSource.updatePassword(auth)) {
+                    emailPasswordService.syncPasswordToEmail(newEmail, emailPassword, auth.getNickname());
+                    passwordAdopted = true;
+                }
+            }
+
             if (playerCache.getAuth(playerName) != null) {
                 playerCache.updatePlayer(auth);
+            }
+
+            Player target = bukkitService.getPlayerExact(playerName);
+            if (target != null && target.isOnline()) {
+                commonService.send(target, MessageKey.ADMIN_EMAIL_SET_NOTIFY, newEmail);
+                if (passwordAdopted) {
+                    commonService.send(target, MessageKey.EMAIL_PASSWORD_ADOPTED);
+                }
+                // 通知其他插件：邮箱绑定已被管理员确认（数据整合插件据此向网站后端同步）
+                bukkitService.callEvent(new EmailConfirmedEvent(target, newEmail));
+                if (accountMigrationService.isInMigrationLimbo(target)) {
+                    // 玩家正卡在迁移引导中：作废其待确认的邮箱变更并立即放行登录
+                    codeManager.unverify(target.getName().toLowerCase(Locale.ROOT));
+                    pendingEmailChangeCache.remove(target.getName());
+                    asynchronousLogin.performLogin(target, auth);
+                }
             }
             commonService.send(sender, MessageKey.ADMIN_EMAIL_SET_SUCCESS, playerName, newEmail);
         });
     }
 
     /**
-     * Removes the email address bound to the given player's account.
+     * Removes the email address bound to the given player's account, reverting it to a v1
+     * account. An online, authenticated player is sent back to the unauthenticated state
+     * and is guided through the email migration immediately, just like when a player
+     * without a bound email logs in.
      *
      * @param sender the command sender
      * @param arguments the command arguments
@@ -162,13 +232,28 @@ public class EmailChangeCommand implements ExecutableCommand {
                 return;
             }
 
+            // 删除邮箱并将账号回退为 v1（无邮箱绑定），下次登录将重新进入迁移引导
             auth.setEmail("");
-            if (!dataSource.updateEmail(auth)) {
+            auth.setSchemaVersion(null);
+            if (!dataSource.updateEmail(auth) || !dataSource.updateSchemaVersion(auth)) {
                 commonService.send(sender, MessageKey.ERROR);
                 return;
             }
 
-            if (playerCache.getAuth(playerName) != null) {
+            Player target = bukkitService.getPlayerExact(playerName);
+            if (target != null && target.isOnline() && playerCache.isAuthenticated(playerName)) {
+                // 在线已登录玩家：立即退回未登录状态，并触发与“未绑定邮箱玩家登录”一致的迁移引导
+                String name = target.getName().toLowerCase(Locale.ROOT);
+                playerCache.removePlayer(name);
+                codeManager.unverify(name);
+                pendingEmailChangeCache.remove(name);
+                dataSource.setUnlogged(name);
+                sessionService.revokeSession(name);
+                bungeeSender.sendAuthMeBungeecordMessage(target, MessageType.LOGOUT);
+                velocitySender.sendAuthMeVelocityMessage(target, VMessageType.LOGOUT);
+                commonService.send(target, MessageKey.ADMIN_EMAIL_DELETE_NOTIFY);
+                accountMigrationService.handlePendingMigration(target, auth);
+            } else if (playerCache.getAuth(playerName) != null) {
                 playerCache.updatePlayer(auth);
             }
             commonService.send(sender, MessageKey.ADMIN_EMAIL_DELETE_SUCCESS, playerName);

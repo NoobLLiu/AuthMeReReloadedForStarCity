@@ -128,6 +128,8 @@ email:
   admin_accounts_header: '&2Accounts bound to &f%email&2: &f%count'
   admin_accounts_entry: ' &8- &f%player'
   admin_accounts_empty: '&eNo accounts are bound to &f%email&e.'
+  admin_email_set_notify: '&eYour email address has been updated by an administrator to: &f%email'
+  admin_email_delete_notify: '&eAn administrator has removed the email binding of your account. Please bind an email before playing.'
 
 # Password recovery by email
 recovery:

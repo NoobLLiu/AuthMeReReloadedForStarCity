@@ -296,6 +296,12 @@ public enum MessageKey {
     /** No accounts are bound to %email. */
     ADMIN_EMAIL_ACCOUNTS_EMPTY("email.admin_accounts_empty", "%email"),
 
+    /** Your email address has been updated by an administrator to: %email */
+    ADMIN_EMAIL_SET_NOTIFY("email.admin_email_set_notify", "%email"),
+
+    /** An administrator has removed the email binding of your account. */
+    ADMIN_EMAIL_DELETE_NOTIFY("email.admin_email_delete_notify"),
+
     /** Recovery email sent successfully! Please check your email inbox! */
     RECOVERY_EMAIL_SENT_MESSAGE("recovery.email_sent"),
 

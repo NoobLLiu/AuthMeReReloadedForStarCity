@@ -136,6 +136,8 @@ email:
     admin_accounts_header: '&a邮箱 &f%email &a共绑定 &f%count &a个账号:'
     admin_accounts_entry: ' &8- &f%player'
     admin_accounts_empty: '&e邮箱 &f%email &e没有绑定任何账号'
+    admin_email_set_notify: '&e管理员已将您账号绑定的邮箱更新为: &f%email'
+    admin_email_delete_notify: '&e管理员已删除您账号的邮箱绑定，请重新绑定邮箱后再进行游戏'
 
 # Password recovery by email
 recovery:
