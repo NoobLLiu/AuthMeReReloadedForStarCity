@@ -128,6 +128,14 @@ email:
     send_failure: '&c邮件已被作废,请检查您的邮箱是否正常工作.'
     change_password_expired: '&c您不能使用此命令更改密码'
     email_cooldown_error: '&c您需要等待 %time 后才能再次请求发送'
+    usage_emailchange: '&c用法: /authme emailchange view|set|delete <玩家> [邮箱] / accounts <邮箱> / deleteaccount <玩家>'
+    admin_email_show: '&a玩家 &f%player &a绑定的邮箱: &f%email'
+    admin_email_show_empty: '&e玩家 &f%player &e的账号未绑定邮箱'
+    admin_email_set: '&a已将玩家 &f%player &a的邮箱修改为 &f%email'
+    admin_email_deleted: '&a已删除玩家 &f%player &a的邮箱绑定'
+    admin_accounts_header: '&a邮箱 &f%email &a共绑定 &f%count &a个账号:'
+    admin_accounts_entry: ' &8- &f%player'
+    admin_accounts_empty: '&e邮箱 &f%email &e没有绑定任何账号'
 
 # Password recovery by email
 recovery:

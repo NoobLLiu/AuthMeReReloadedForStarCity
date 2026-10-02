@@ -272,6 +272,30 @@ public enum MessageKey {
     /** You currently don't have email address associated with this account. */
     SHOW_NO_EMAIL("email.no_email_for_account"),
 
+    /** Usage: /authme emailchange view|set|delete <player> [email] / accounts <email> / deleteaccount <player> */
+    USAGE_EMAILCHANGE("email.usage_emailchange"),
+
+    /** Email bound to %player: %email */
+    ADMIN_EMAIL_SHOW("email.admin_email_show", "%player", "%email"),
+
+    /** No email is bound to the account of %player. */
+    ADMIN_EMAIL_SHOW_EMPTY("email.admin_email_show_empty", "%player"),
+
+    /** Email of %player has been set to %email. */
+    ADMIN_EMAIL_SET_SUCCESS("email.admin_email_set", "%player", "%email"),
+
+    /** Email binding of %player has been removed. */
+    ADMIN_EMAIL_DELETE_SUCCESS("email.admin_email_deleted", "%player"),
+
+    /** Accounts bound to %email (%count in total): */
+    ADMIN_EMAIL_ACCOUNTS_HEADER("email.admin_accounts_header", "%email", "%count"),
+
+    /** Account list entry: %player */
+    ADMIN_EMAIL_ACCOUNTS_ENTRY("email.admin_accounts_entry", "%player"),
+
+    /** No accounts are bound to %email. */
+    ADMIN_EMAIL_ACCOUNTS_EMPTY("email.admin_accounts_empty", "%email"),
+
     /** Recovery email sent successfully! Please check your email inbox! */
     RECOVERY_EMAIL_SENT_MESSAGE("recovery.email_sent"),
 

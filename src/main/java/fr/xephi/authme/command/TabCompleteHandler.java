@@ -34,6 +34,12 @@ public class TabCompleteHandler implements TabCompleter {
     private static final String[] DEBUG_SECTIONS =
         {"perm", "stats", "country", "db", "valid", "limbo", "mail", "spawn", "mysqldef"};
 
+    /**
+     * Subcommands available to {@code /authme emailchange}.
+     */
+    private static final String[] EMAILCHANGE_SUBCOMMANDS =
+        {"view", "set", "delete", "accounts", "deleteaccount"};
+
     private final CommandInitializer commandInitializer;
     private final PermissionsManager permissionsManager;
     private final BukkitService bukkitService;
@@ -95,7 +101,13 @@ public class TabCompleteHandler implements TabCompleter {
         List<CommandArgumentDescription> arguments = current.getArguments();
         if (argumentIndex >= 0 && argumentIndex < arguments.size()) {
             String argumentName = arguments.get(argumentIndex).getName().toLowerCase(Locale.ROOT);
-            if (argumentName.contains("player")) {
+            if ("subcommand".equals(argumentName)) {
+                for (String subcommand : EMAILCHANGE_SUBCOMMANDS) {
+                    addIfPrefixMatches(suggestions, subcommand, partial);
+                }
+            } else if (argumentName.contains("player") && !partial.contains("@")) {
+                // A partial starting with "@" suggests the user is typing an email
+                // address (e.g. for /authme emailchange accounts), so no player names are offered
                 for (Player onlinePlayer : bukkitService.getOnlinePlayers()) {
                     addIfPrefixMatches(suggestions, onlinePlayer.getName(), partial);
                 }

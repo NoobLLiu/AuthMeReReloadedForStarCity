@@ -79,6 +79,18 @@ commands:
         arg2:
             label: '邮箱'
             description: '邮箱'
+    authme.emailchange:
+        description: '管理玩家绑定的邮箱或邮箱绑定的账号'
+        detailedDescription: '管理玩家账号绑定的邮箱，或查看、修改、删除某邮箱绑定的账号。子命令: view <玩家> 查看邮箱; set <玩家> <邮箱> 修改邮箱; delete <玩家> 删除邮箱; accounts <邮箱> 查看邮箱绑定的所有账号; deleteaccount <玩家> 注销账号'
+        arg1:
+            label: '子命令'
+            description: 'view / set / delete / accounts / deleteaccount'
+        arg2:
+            label: '玩家或邮箱'
+            description: '玩家（view/set/delete/deleteaccount 用）或邮箱（accounts 用）'
+        arg3:
+            label: '新邮箱'
+            description: 'set 子命令使用的新邮箱'
     authme.getip:
         description: '获取玩家IP'
         detailedDescription: '获取玩家IP'
