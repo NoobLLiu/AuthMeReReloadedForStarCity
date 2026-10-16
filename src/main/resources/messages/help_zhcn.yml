@@ -317,5 +317,23 @@ commands:
             label: '功能'
             description: '要使用的调试功能'
     lg:
-        description: '个人登录信息菜单'
-        detailedDescription: '查看当前登录账号、归属邮箱及该邮箱下的所有账号。选择账号即可切换身份：切换后会被断开连接，在 3 分钟内重新进入服务器即以所选账号的身份上线。使用 /lg sync 可手动将当前连接的UUID同步到账号。'
+        description: '账号切换面板'
+        detailedDescription: '打开账号切换面板：可新增绑定账号（需验证该账号的密码），或切换到已绑定的账号。切换后会被断开连接，在 3 分钟内重新进入服务器即以所选账号的身份上线。切换无需绑定邮箱。'
+    lg.sync:
+        description: '同步账号UUID'
+        detailedDescription: '手动将当前连接的UUID同步到自己的账号。'
+    lg.bind:
+        description: '新增绑定账号'
+        detailedDescription: '通过验证该账号的密码，将另一个账号绑定到你的账号。绑定后可在 /lg 面板中互相切换。'
+        arg1:
+            label: 'account'
+            description: '要绑定的账号名'
+        arg2:
+            label: 'password'
+            description: '该账号的密码'
+    lg.unbind:
+        description: '解除账号绑定'
+        detailedDescription: '解除你的账号与指定绑定账号之间的绑定。'
+        arg1:
+            label: 'account'
+            description: '已绑定的账号名'

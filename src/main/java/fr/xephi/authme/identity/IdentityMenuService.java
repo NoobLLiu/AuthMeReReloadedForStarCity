@@ -22,12 +22,13 @@ import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 /**
- * Builds and opens the identity menu (/lg): shows the current account, its bound email
- * address and all other accounts registered under the same email, which can be switched to.
+ * Builds and opens the identity menu (/lg): shows the current account, a button to bind a
+ * new account (verified by that account's password) and all accounts bound to the current
+ * one, which can be switched to. An email address is no longer required for switching; if
+ * one is bound it is shown as part of the current account's information.
  */
 public class IdentityMenuService {
 
@@ -37,7 +38,7 @@ public class IdentityMenuService {
         28, 29, 30, 31, 32, 33, 34,
         37, 38, 39, 40, 41, 42, 43};
     private static final int SLOT_CURRENT = 4;
-    private static final int SLOT_EMAIL = 13;
+    private static final int SLOT_BIND_ADD = 13;
     private static final int SLOT_NO_ACCOUNTS = 22;
     private static final int SLOT_PREV_PAGE = 45;
     private static final int SLOT_CLOSE = 49;
@@ -49,15 +50,18 @@ public class IdentityMenuService {
     private final Messages messages;
     private final BukkitService bukkitService;
     private final GMZCSkinCacheHook skinCacheHook;
+    private final IdentityBindManager bindManager;
 
     @Inject
     IdentityMenuService(DataSource dataSource, PlayerCache playerCache, Messages messages,
-                        BukkitService bukkitService, GMZCSkinCacheHook skinCacheHook) {
+                        BukkitService bukkitService, GMZCSkinCacheHook skinCacheHook,
+                        IdentityBindManager bindManager) {
         this.dataSource = dataSource;
         this.playerCache = playerCache;
         this.messages = messages;
         this.bukkitService = bukkitService;
         this.skinCacheHook = skinCacheHook;
+        this.bindManager = bindManager;
     }
 
     /**
@@ -70,23 +74,7 @@ public class IdentityMenuService {
         bukkitService.runTaskAsynchronously(() -> {
             PlayerAuth auth = getAuth(player.getName());
             String email = auth == null ? null : auth.getEmail();
-            List<IdentityMenuHolder.AccountEntry> accounts = new ArrayList<>();
-
-            if (!IdentitySwitchManager.isEmailMissing(email)) {
-                String playerLower = player.getName().toLowerCase(Locale.ROOT);
-                for (String name : dataSource.getAllAuthsByEmail(email)) {
-                    if (name == null || name.toLowerCase(Locale.ROOT).equals(playerLower)) {
-                        continue;
-                    }
-                    PlayerAuth accountAuth = dataSource.getAuth(name);
-                    if (accountAuth == null || accountAuth.getRealName() == null) {
-                        continue;
-                    }
-                    accounts.add(new IdentityMenuHolder.AccountEntry(
-                        accountAuth.getRealName(), accountAuth.getUuid(),
-                        IdentitySwitchManager.isFloodgateUuid(accountAuth.getUuid())));
-                }
-            }
+            List<IdentityMenuHolder.AccountEntry> accounts = bindManager.getValidBoundAccounts(player.getName());
             final String boundEmail = IdentitySwitchManager.isEmailMissing(email) ? null : email;
             final List<IdentityMenuHolder.AccountEntry> entries = accounts;
             bukkitService.runTask(player, () -> {
@@ -125,14 +113,14 @@ public class IdentityMenuService {
         }
 
         // Current account
-        inventory.setItem(SLOT_CURRENT, createCurrentAccountItem(player));
+        inventory.setItem(SLOT_CURRENT, createCurrentAccountItem(player, email));
 
-        // Bound email address
-        inventory.setItem(SLOT_EMAIL, createEmailItem(player, email));
+        // Button to bind a new account
+        inventory.setItem(SLOT_BIND_ADD, createBindAddItem(player));
 
         // Switchable accounts of the current page
         if (accounts.isEmpty()) {
-            inventory.setItem(SLOT_NO_ACCOUNTS, createNoAccountsItem(player, email));
+            inventory.setItem(SLOT_NO_ACCOUNTS, createNoAccountsItem(player));
         } else {
             int from = page * ACCOUNTS_PER_PAGE;
             int to = Math.min(accounts.size(), from + ACCOUNTS_PER_PAGE);
@@ -164,12 +152,22 @@ public class IdentityMenuService {
     }
 
     /**
-     * Creates the head item of the current account (glowing).
+     * @return the slot containing the bind-new-account button
+     */
+    public static int getBindAddSlot() {
+        return SLOT_BIND_ADD;
+    }
+
+    /**
+     * Creates the head item of the current account (glowing). The bound email address, if
+     * any, is shown as an additional lore line — it is optional information and no longer
+     * a requirement for switching.
      *
      * @param player the viewing player
+     * @param email the bound email address, or null if not bound
      * @return the created item
      */
-    private ItemStack createCurrentAccountItem(Player player) {
+    private ItemStack createCurrentAccountItem(Player player, String email) {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
         if (!skinCacheHook.applySkin(meta, player)) {
@@ -179,6 +177,10 @@ public class IdentityMenuService {
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_CURRENT));
         lore.add(ChatColor.DARK_GRAY + "UUID: " + player.getUniqueId());
+        if (email != null) {
+            lore.add(ChatColor.DARK_GRAY + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_EMAIL)
+                + ": " + ChatColor.WHITE + email);
+        }
         meta.setLore(lore);
         meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
@@ -187,35 +189,35 @@ public class IdentityMenuService {
     }
 
     /**
-     * Creates the item showing the bound email address.
+     * Creates the button that starts binding a new account.
      *
      * @param player the viewing player
-     * @param email the bound email address, or null if not bound
      * @return the created item
      */
-    private ItemStack createEmailItem(Player player, String email) {
-        ItemStack item = new ItemStack(Material.PAPER);
+    private ItemStack createBindAddItem(Player player) {
+        ItemStack item = new ItemStack(Material.WRITABLE_BOOK);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.YELLOW + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_EMAIL));
+        meta.setDisplayName(ChatColor.GREEN
+            + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_BIND_ADD));
         List<String> lore = new ArrayList<>();
-        lore.add(email == null
-            ? ChatColor.RED + messages.retrieveSingle(player, MessageKey.IDENTITY_EMAIL_NOT_BOUND)
-            : ChatColor.WHITE + email);
+        lore.add(ChatColor.GRAY
+            + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_BIND_ADD_HINT));
+        lore.add(ChatColor.DARK_GRAY
+            + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_BIND_ADD_HINT_CMD));
         meta.setLore(lore);
         item.setItemMeta(meta);
         return item;
     }
 
     /**
-     * Creates the placeholder item shown when no other account exists under the email.
+     * Creates the placeholder item shown when no account is bound yet.
      *
      * @param player the viewing player
-     * @param email the bound email address, or null if not bound
      * @return the created item
      */
-    private ItemStack createNoAccountsItem(Player player, String email) {
+    private ItemStack createNoAccountsItem(Player player) {
         return createSimpleItem(Material.BARRIER, ChatColor.RED
-            + messages.retrieveSingle(player, MessageKey.IDENTITY_MENU_NO_OTHER_ACCOUNTS));
+            + messages.retrieveSingle(player, MessageKey.IDENTITY_MENU_NO_BOUND_ACCOUNTS));
     }
 
     /**
@@ -249,6 +251,7 @@ public class IdentityMenuService {
             lore.add(ChatColor.DARK_GRAY + "UUID: " + uuid);
             lore.add(ChatColor.GRAY + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_CLICK_SWITCH));
         }
+        lore.add(ChatColor.DARK_GRAY + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_CLICK_UNBIND));
         meta.setLore(lore);
         item.setItemMeta(meta);
         return item;

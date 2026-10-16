@@ -33,7 +33,10 @@ import fr.xephi.authme.command.executable.authme.VersionCommand;
 import fr.xephi.authme.command.executable.authme.debug.DebugCommand;
 import fr.xephi.authme.command.executable.captcha.CaptchaCommand;
 import fr.xephi.authme.command.executable.changepassword.ChangePasswordCommand;
+import fr.xephi.authme.command.executable.identity.IdentityBindCommand;
 import fr.xephi.authme.command.executable.identity.IdentityMenuCommand;
+import fr.xephi.authme.command.executable.identity.IdentitySyncCommand;
+import fr.xephi.authme.command.executable.identity.IdentityUnbindCommand;
 import fr.xephi.authme.command.executable.email.AddEmailCommand;
 import fr.xephi.authme.command.executable.email.ChangeEmailCommand;
 import fr.xephi.authme.command.executable.email.EmailBaseCommand;
@@ -155,12 +158,43 @@ public class CommandInitializer {
             .parent(null)
             .labels("lg")
             .description("Identity menu command")
-            .detailedDescription("Command to view your login information and switch between the accounts "
-                + "bound to your email address. Switching disconnects you; reconnect within three minutes "
-                + "to enter the server as the selected account. Use '/lg sync' to manually record the UUID "
-                + "you are currently connected with into your account.")
-            .withArgument("action", "'sync' to manually sync the account's UUID", OPTIONAL)
+            .detailedDescription("Command to open the account switch panel: bind a new account (verified "
+                + "by that account's password) or switch to one of the accounts bound to yours. Switching "
+                + "disconnects you; reconnect within three minutes to enter the server as the selected "
+                + "account. No email address is required for switching.")
             .executableCommand(IdentityMenuCommand.class)
+            .register();
+
+        // Register the sync command (/lg sync)
+        CommandDescription.builder()
+            .parent(identityBase)
+            .labels("sync")
+            .description("Sync the account's UUID")
+            .detailedDescription("Manually record the UUID you are currently connected with into your "
+                + "own account.")
+            .executableCommand(IdentitySyncCommand.class)
+            .register();
+
+        // Register the bind command (/lg bind <account> <password>)
+        CommandDescription.builder()
+            .parent(identityBase)
+            .labels("bind")
+            .description("Bind another account")
+            .detailedDescription("Bind another account to yours by verifying that account's password. "
+                + "Bound accounts can be switched to from the /lg panel.")
+            .withArgument("accountToBind", "Name of the account to bind", MANDATORY)
+            .withArgument("password", "Password of that account", MANDATORY)
+            .executableCommand(IdentityBindCommand.class)
+            .register();
+
+        // Register the unbind command (/lg unbind <account>)
+        CommandDescription.builder()
+            .parent(identityBase)
+            .labels("unbind")
+            .description("Unbind an account")
+            .detailedDescription("Remove the binding between your account and the given bound account.")
+            .withArgument("boundAccount", "Name of the bound account", MANDATORY)
+            .executableCommand(IdentityUnbindCommand.class)
             .register();
 
         // Create totp base command
