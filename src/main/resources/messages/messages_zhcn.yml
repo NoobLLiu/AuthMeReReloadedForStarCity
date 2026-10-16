@@ -7,14 +7,9 @@
 registration:
     disabled: '&c注册已被禁止'
     name_taken: '&c此用户已经在此服务器注册过'
-    register_request: '&b请输入“&a/reg <邮箱>&b”注册，查收验证码后输入 &a/email confirm <验证码>&b 完成验证，再输入 &a/reg <密码> <重复密码>&b 设置密码'
-    command_usage: '&c正确用法:“/reg <邮箱>”，验证邮箱后再用“/reg <密码> <重复密码>”设置密码'
-    command_usage_email: '&c正确用法:“/reg <邮箱>”'
-    command_usage_password: '&c正确用法:“/reg <密码> <重复密码>”'
-    email_confirmed: '&a邮箱验证成功！请输入“/reg <密码> <重复密码>”设置密码，完成注册'
-    password_reused: '&a该邮箱已设置过密码，您的账号已直接使用该密码完成注册并自动登录。下次登录请使用该邮箱的密码。'
-    email_in_use_hint: '&e提示：该邮箱已绑定其他账号。验证成功后将直接沿用该邮箱已有的密码，无需再设置新密码。'
-    verification_required: '&e验证码已发送到 &a%email&e，请先输入“&a/email confirm <验证码>&e”完成验证，再设置密码'
+    register_request: '&b请输入“&a/reg <密码> <重复密码>&b”注册'
+    command_usage: '&c正确用法:“/reg <密码> <重复密码>”'
+    email_in_use_hint: '&e提示：该邮箱已绑定其他账号。验证成功后，你的密码将自动变更为该邮箱当前使用的密码。'
     reg_only: '&c只允许注册过的玩家进服!'
     success: '&a*** 已成功注册 ***'
     kicked_admin_registered: '&a*** 管理员刚刚注册了您; 请重新登录 ***'
@@ -157,7 +152,7 @@ captcha:
     wrong_captcha: '&c错误的验证码.'
     valid_captcha: '&a*** 验证通过 ***'
     captcha_for_registration: '&7请输入 /captcha %captcha_code 来验证操作.'
-    register_captcha_valid: '&a验证通过, 现在可以使用 /reg <邮箱> 注册啦!'
+    register_captcha_valid: '&a验证通过, 现在可以使用 /reg <密码> <重复密码> 注册啦!'
 
 # Verification code
 verification:

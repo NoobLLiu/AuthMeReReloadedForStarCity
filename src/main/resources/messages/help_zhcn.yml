@@ -231,13 +231,13 @@ commands:
             description: '指令'
     register:
         description: '注册账号'
-        detailedDescription: '注册分两步：先输入 /register <邮箱>，查收验证码后输入 /email confirm <验证码>，最后输入 /register <密码> <重复密码> 完成注册。若该邮箱已绑定其他账号，验证后将直接沿用该邮箱已有的密码，无需再设置密码。'
+        detailedDescription: '输入 /register <密码> <重复密码> 设置密码完成注册。邮箱为可选，注册后可通过 /email add <邮箱> 绑定。'
         arg1:
-            label: '邮箱或密码'
-            description: '第一步输入邮箱地址；邮箱验证完成后输入新密码'
+            label: '密码'
+            description: '要设置的密码'
         arg2:
             label: '重复密码'
-            description: '再次输入新密码以确认'
+            description: '再次输入密码以确认'
     login:
         description: '登录命令'
         detailedDescription: '使用密码登录。同一邮箱下的所有账号使用相同的密码。'

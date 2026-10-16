@@ -89,32 +89,17 @@ public enum MessageKey {
     /** Please, login with the command: /login &lt;password&gt; */
     LOGIN_MESSAGE("login.login_request"),
 
-    /** Please, register to the server with the command: /register <email>, confirm the code with /email confirm <code>, then set a password with /register <password> <ConfirmPassword> */
+    /** Please, register to the server with the command: /register <password> <ConfirmPassword> */
     REGISTER_MESSAGE("registration.register_request"),
 
     /** You have exceeded the maximum number of registrations (%reg_count/%max_acc %reg_names) for your connection! */
     MAX_REGISTER_EXCEEDED("error.max_registration", "%max_acc", "%reg_count", "%reg_names"),
 
-    /** Usage: /register &lt;email&gt;, then /email confirm &lt;code&gt;, then /register &lt;password&gt; &lt;ConfirmPassword&gt; */
-    USAGE_REGISTER("registration.command_usage"),
-
-    /** Please enter your email address first: /register &lt;email&gt; */
-    REGISTER_USAGE_EMAIL("registration.command_usage_email"),
-
     /** Usage: /register &lt;password&gt; &lt;ConfirmPassword&gt; */
-    REGISTER_USAGE_PASSWORD("registration.command_usage_password"),
-
-    /** Email address confirmed! Now set your password with /register &lt;password&gt; &lt;ConfirmPassword&gt; */
-    REGISTER_EMAIL_CONFIRMED("registration.email_confirmed"),
-
-    /** This email already has a password: your account was registered with it and you were logged in automatically. */
-    REGISTER_PASSWORD_REUSED("registration.password_reused"),
+    USAGE_REGISTER("registration.command_usage"),
 
     /** This email is already bound to existing accounts: once verified, its password will be adopted and no new password is needed. */
     REGISTER_EMAIL_IN_USE_HINT("registration.email_in_use_hint"),
-
-    /** A verification code was already sent to %email: confirm it with /email confirm &lt;code&gt; before setting a password. */
-    REGISTER_VERIFICATION_REQUIRED("registration.verification_required", "%email"),
 
     /** Usage: /unregister &lt;password&gt; */
     USAGE_UNREGISTER("unregister.command_usage"),

@@ -120,11 +120,10 @@ public class CommandInitializer {
             .parent(null)
             .labels("register", "reg")
             .description("Register an account")
-            .detailedDescription("Two-step registration: enter /register <email>, confirm the code sent to you "
-                + "with /email confirm <code>, then set your password with /register <password> <password>. "
-                + "If the email is already bound to another account, its password is reused automatically.")
-            .withArgument("emailOrPassword", "Email address (first step), or new password (after confirmation)", OPTIONAL)
-            .withArgument("password", "Password confirmation (after email confirmation)", OPTIONAL)
+            .detailedDescription("Register with /register <password> <confirmPassword>. An email address "
+                + "is optional and can be bound later with /email add.")
+            .withArgument("password", "Password to register with", OPTIONAL)
+            .withArgument("confirmation", "Repeat the password", OPTIONAL)
             .permission(PlayerPermission.REGISTER)
             .executableCommand(RegisterCommand.class)
             .register();

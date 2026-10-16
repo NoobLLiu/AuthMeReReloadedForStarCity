@@ -9,17 +9,13 @@ import fr.xephi.authme.datasource.DataSource;
 import fr.xephi.authme.events.EmailConfirmedEvent;
 import fr.xephi.authme.message.MessageKey;
 import fr.xephi.authme.output.ConsoleLoggerFactory;
-import fr.xephi.authme.process.Management;
 import fr.xephi.authme.process.login.AsynchronousLogin;
-import fr.xephi.authme.process.register.executors.EmailAdoptRegisterParams;
-import fr.xephi.authme.process.register.executors.RegistrationMethod;
 import fr.xephi.authme.security.crypts.HashedPassword;
 import fr.xephi.authme.service.AccountMigrationService;
 import fr.xephi.authme.service.BukkitService;
 import fr.xephi.authme.service.CommonService;
 import fr.xephi.authme.service.EmailPasswordService;
 import fr.xephi.authme.service.PendingEmailChangeCache;
-import fr.xephi.authme.service.PendingRegistrationCache;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -39,9 +35,8 @@ import java.util.Locale;
  * verification code (unregister, change password), matching the instruction in the
  * verification email.</p>
  *
- * <p>For unauthenticated players this command additionally handles two flows:
- * the email binding of a v1 account pending migration, and the email
- * confirmation step of the two-phase v2 registration.</p>
+ * <p>For unauthenticated players this command additionally handles the email
+ * binding of a v1 account pending migration.</p>
  */
 public class EmailConfirmCommand extends PlayerCommand {
 
@@ -52,9 +47,6 @@ public class EmailConfirmCommand extends PlayerCommand {
 
     @Inject
     private PendingEmailChangeCache pendingEmailChangeCache;
-
-    @Inject
-    private PendingRegistrationCache pendingRegistrationCache;
 
     @Inject
     private VerificationCodeManager codeManager;
@@ -75,9 +67,6 @@ public class EmailConfirmCommand extends PlayerCommand {
     private BukkitService bukkitService;
 
     @Inject
-    private Management management;
-
-    @Inject
     private AsynchronousLogin asynchronousLogin;
 
     @Override
@@ -89,11 +78,6 @@ public class EmailConfirmCommand extends PlayerCommand {
             // binding and resumes the intercepted login
             if (accountMigrationService.isAwaitingEmailBinding(player)) {
                 processMigrationConfirmation(player, playerName, arguments.get(0));
-                return;
-            }
-            // Two-phase v2 registration: confirm the email address with the code
-            if (pendingRegistrationCache.has(playerName)) {
-                processRegistrationConfirmation(player, playerName, arguments.get(0));
                 return;
             }
             // Database operations are performed asynchronously, as in the other async processes
@@ -200,45 +184,6 @@ public class EmailConfirmCommand extends PlayerCommand {
         });
         // Otherwise the player must still set a new password; the pending email is
         // kept in the cache and the guidance message has already been sent
-    }
-
-    /**
-     * Handles the verification code of the two-phase v2 registration. If the confirmed
-     * email address is already bound to other accounts, its password is adopted: the
-     * account is registered with it right away and the player is logged in. Otherwise
-     * the email address is marked as confirmed and the player may set a password.
-     *
-     * @param player the player registering
-     * @param playerName the lowercased player name
-     * @param code the verification code supplied by the player
-     */
-    private void processRegistrationConfirmation(Player player, String playerName, String code) {
-        PendingRegistrationCache.PendingRegistration pending = pendingRegistrationCache.get(playerName);
-        if (pending.isVerified()) {
-            commonService.send(player, MessageKey.REGISTER_USAGE_PASSWORD);
-            return;
-        }
-        if (!pending.getCode().equals(code)) {
-            commonService.send(player, MessageKey.EMAIL_CONFIRM_WRONG_CODE);
-            return;
-        }
-
-        // The password follows the email: if the email is already in use and has a
-        // password, the new account adopts it instead of asking for a new one.
-        // Database operations are performed asynchronously, as in the other async processes
-        bukkitService.runTaskAsynchronously(() -> {
-            HashedPassword emailPassword = emailPasswordService.findPasswordByEmail(pending.getEmail());
-            if (emailPassword != null) {
-                // The pending registration is removed once the adoption has been persisted
-                // (in EmailAdoptRegisterExecutor), so a failed save keeps the confirmed state
-                management.performRegister(RegistrationMethod.EMAIL_ADOPT_REGISTRATION,
-                    EmailAdoptRegisterParams.of(player, pending.getEmail(), emailPassword));
-                return;
-            }
-
-            pending.setVerified(true);
-            commonService.send(player, MessageKey.REGISTER_EMAIL_CONFIRMED);
-        });
     }
 
     @Override

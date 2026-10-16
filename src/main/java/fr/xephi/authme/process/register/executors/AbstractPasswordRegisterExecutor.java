@@ -7,7 +7,6 @@ import fr.xephi.authme.security.PasswordSecurity;
 import fr.xephi.authme.security.crypts.HashedPassword;
 import fr.xephi.authme.service.BukkitService;
 import fr.xephi.authme.service.CommonService;
-import fr.xephi.authme.service.PendingRegistrationCache;
 import fr.xephi.authme.service.ValidationService;
 import fr.xephi.authme.settings.properties.PluginSettings;
 import fr.xephi.authme.settings.properties.RegistrationSettings;
@@ -48,9 +47,6 @@ abstract class AbstractPasswordRegisterExecutor<P extends AbstractPasswordRegist
 
     @Inject
     private AsynchronousLogin asynchronousLogin;
-
-    @Inject
-    private PendingRegistrationCache pendingRegistrationCache;
 
     @Override
     public boolean isRegistrationAdmitted(P params) {
@@ -99,7 +95,5 @@ abstract class AbstractPasswordRegisterExecutor<P extends AbstractPasswordRegist
             }
         }
         syncProcessManager.processSyncPasswordRegister(player, params.getEmail());
-        // The account is persisted: the two-phase registration cache entry is no longer needed
-        pendingRegistrationCache.remove(params.getPlayerName());
     }
 }
