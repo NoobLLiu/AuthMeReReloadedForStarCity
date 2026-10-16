@@ -21,6 +21,7 @@ import fr.xephi.authme.initialization.OnStartupTasks;
 import fr.xephi.authme.initialization.SettingsProvider;
 import fr.xephi.authme.initialization.TaskCloser;
 import fr.xephi.authme.listener.AdvancedShulkerFixListener;
+import fr.xephi.authme.listener.BedrockAuthFormListener;
 import fr.xephi.authme.listener.BedrockAutoLoginListener;
 import fr.xephi.authme.listener.BlockListener;
 import fr.xephi.authme.listener.DoubleLoginFixListener;
@@ -376,6 +377,9 @@ public class AuthMe extends JavaPlugin {
         }
 
         //Register 3rd party listeners
+        // Bedrock auth form: native Bedrock GUI (register / login) for unauthenticated
+        // Bedrock players; the listener itself checks the settings and Floodgate's presence
+        pluginManager.registerEvents(injector.getSingleton(BedrockAuthFormListener.class), this);
         if (settings.getProperty(SecuritySettings.FORCE_LOGIN_BEDROCK) && settings.getProperty(HooksSettings.HOOK_FLOODGATE_PLAYER) && getServer().getPluginManager().getPlugin("floodgate") != null) {
             pluginManager.registerEvents(injector.getSingleton(BedrockAutoLoginListener.class), this);
         } else if (settings.getProperty(SecuritySettings.FORCE_LOGIN_BEDROCK) && (!settings.getProperty(HooksSettings.HOOK_FLOODGATE_PLAYER) || getServer().getPluginManager().getPlugin("floodgate") == null)) {

@@ -49,6 +49,13 @@ public final class HooksSettings implements SettingsHolder {
     public static final Property<Boolean> FLOODGATE_LINKED_IDENTITY =
         newProperty("Hooks.floodgateLinkedIdentity", true);
 
+    @Comment({"Show a native Bedrock GUI form (register / login) to Bedrock players who",
+        "join without being authenticated, instead of only chat prompts.",
+        "Players reconnecting for an identity switch (/lg) are excluded: they are",
+        "handled by the switch's auto login. Requires floodgate."})
+    public static final Property<Boolean> BEDROCK_AUTH_FORM =
+        newProperty("Hooks.bedrockAuthForm", true);
+
 
     @Comment("Send player to this BungeeCord server after register/login")
     public static final Property<String> BUNGEECORD_SERVER =

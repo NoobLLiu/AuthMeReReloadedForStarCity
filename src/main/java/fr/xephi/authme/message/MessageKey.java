@@ -30,6 +30,46 @@ public enum MessageKey {
     BEDROCK_AUTO_LOGGED_IN("bedrock_auto_login.success"),
 
     /**
+     * Title of the Bedrock login form.
+     */
+    BEDROCK_AUTH_LOGIN_TITLE("bedrock_auth.login_title"),
+
+    /**
+     * Intro text of the Bedrock login form.
+     */
+    BEDROCK_AUTH_LOGIN_LABEL("bedrock_auth.login_label"),
+
+    /**
+     * Title of the Bedrock register form.
+     */
+    BEDROCK_AUTH_REGISTER_TITLE("bedrock_auth.register_title"),
+
+    /**
+     * Intro text of the Bedrock register form.
+     */
+    BEDROCK_AUTH_REGISTER_LABEL("bedrock_auth.register_label"),
+
+    /**
+     * Label of the password input on the Bedrock auth forms.
+     */
+    BEDROCK_AUTH_PASSWORD_INPUT("bedrock_auth.password_input"),
+
+    /**
+     * Label of the confirm-password input on the Bedrock register form.
+     */
+    BEDROCK_AUTH_PASSWORD_CONFIRM_INPUT("bedrock_auth.password_confirm_input"),
+
+    /**
+     * The passwords entered on the Bedrock register form do not match or are empty.
+     */
+    BEDROCK_AUTH_PASSWORD_MISMATCH("bedrock_auth.password_mismatch"),
+
+    /**
+     * The password entered on the Bedrock login form is empty.
+     */
+    BEDROCK_AUTH_PASSWORD_EMPTY("bedrock_auth.password_empty"),
+
+    /**
      * In order to use this command you must be authenticated!
      */
     DENIED_COMMAND("error.denied_command"),

@@ -182,6 +182,17 @@ two_factor:
 bedrock_auto_login:
   success: "&8[&6用戶系統&8] &a基岩版自動登錄完成"
 
+# 3rd party features: Bedrock auth form (register / login)
+bedrock_auth:
+  login_title: "登入"
+  register_title: "註冊"
+  login_label: "&e歡迎回來！&r請輸入密碼登入。"
+  register_label: "&e歡迎！&r請設置密碼完成註冊。"
+  password_input: "密碼"
+  password_confirm_input: "確認密碼"
+  password_mismatch: "&c兩次輸入的密碼不一致或為空。"
+  password_empty: "&c密碼不能為空。"
+
 # 3rd party features: Login Location Fix
 login_location_fix:
   fix_portal: '&8[&6用戶系統&8] &a你在登錄時卡在了地獄門, 現已修正'

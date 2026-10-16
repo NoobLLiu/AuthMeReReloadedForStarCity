@@ -182,6 +182,25 @@ Bug 2 — PendingSwitch 消费过早：
 
 **当前限制**：基岩版玩家暂时无法切换到 Java 版身份。这是 Floodgate 的架构限制（从自己的 GeyserSession 创建 Player，不遵循事件 profile）。未来可通过 Floodgate API 直接干预来实现。
 
+## 六之七、会话 8：基岩版注册/登录 GUI 表单（2026-10-16，未提交）
+
+**需求**：检测到登录玩家为基岩版玩家、且不是切换账号（/lg 流程）而来的玩家时，弹出基岩版原生 GUI 表单用于注册/登录。
+
+**实现（6 个文件，`mvn -s .maven-proxy-settings.xml -DskipTests package` 构建通过）**：
+1. `listener/BedrockAuthFormListener.java`（新增）— PlayerJoinEvent(MONITOR) 延迟 40 tick（让 20 tick 的 IdentityAutoLoginListener / IdentitySwitchJoinListener / BedrockAutoLoginListener 先跑）：
+   - `isFormRequired`：在线 + 未认证 + `Hooks.floodgate` 与 `Hooks.bedrockAuthForm` 均开 + `IdentitySwitchManager.isBedrockPlayer`；
+   - 切换账号排除：`consumeAutoLogin` 命中（监听器顺序竞态兜底）→ forceLogin + 提示后不开表单；`getPendingSwitchByTarget`/`getPendingSwitch` 任一存在（切换流程中的玩家）→ 不开表单并记 info 日志；
+   - 已注册 → 登录表单（1 个密码输入）；未注册 → 注册表单（密码 + 确认密码）；Cumulus `CustomForm`，`validResultHandler` 网络线程 → `bukkitService.runTask` 回主线程；
+   - 登录提交 → `management.performLogin`（错误提示由登录管线发）；注册提交 → 空值/两次不一致 → 提示并重发表单；`ValidationService.validatePassword` 失败 → 提示并重发；通过 → `authmeApi.forceRegister(player, password, true)`（走完整管线含 IP 注册上限）；
+   - 提交后 30 tick 复查：仍未认证 → 重发对应表单（失败重试 UX）；玩家主动关闭表单不重发（可回退聊天命令）；
+   - Floodgate/Cumulus 类缺失或发送失败 → warning 日志，聊天提示兜底。
+2. `HooksSettings.java` — 新增 `Hooks.bedrockAuthForm`（默认 true，需 floodgate + `Hooks.floodgate`）。
+3. `MessageKey.java` — 新增 8 个 `bedrock_auth.*` 枚举（login_title/login_label/register_title/register_label/password_input/password_confirm_input/password_mismatch/password_empty）。
+4. `AuthMe.java` — 无条件注册监听器（运行时自查设置与 Floodgate 存在性，reload 友好），import 排在 BedrockAutoLoginListener 前。
+5. `messages_en/zhcn/zhhk.yml` — 各新增 `bedrock_auth:` 段（8 条文案）。
+
+**与现有功能的协作**：`FORCE_LOGIN_BEDROCK` 开启时 BedrockAutoLoginListener 在 20 tick 自动登录 → 40 tick 时已认证自然跳过；切换而来的玩家由 consumeAutoLogin/待定 switch 检查排除；超时踢出由 TimeoutTask 负责，表单重发不与其冲突。
+
 ## 七、后续可继续的工作（新会话候选）
 
 1. **合并分支**：将 `trae/agent-0iHQBQ` 合并到 `origin/feat/agent-mail`（合并/创建 PR）

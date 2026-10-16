@@ -189,6 +189,17 @@ two_factor:
 bedrock_auto_login:
   success: '&aBedrock auto login success!'
 
+# 3rd party features: Bedrock auth form (register / login)
+bedrock_auth:
+  login_title: 'Login'
+  register_title: 'Register'
+  login_label: '&eWelcome back!&r Enter your password to log in.'
+  register_label: '&eWelcome!&r Set a password to register.'
+  password_input: 'Password'
+  password_confirm_input: 'Confirm password'
+  password_mismatch: '&cThe two passwords do not match or are empty.'
+  password_empty: '&cThe password must not be empty.'
+
 # 3rd party features: Login Location Fix
 login_location_fix:
   fix_portal: '&aYou are stuck in portal during login.'
