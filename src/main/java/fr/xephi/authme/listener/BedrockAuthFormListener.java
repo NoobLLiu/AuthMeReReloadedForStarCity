@@ -16,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.geysermc.cumulus.form.CustomForm;
 import org.geysermc.floodgate.api.FloodgateApi;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
@@ -23,6 +24,9 @@ import org.geysermc.floodgate.api.player.FloodgatePlayer;
 import javax.inject.Inject;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Opens a native Bedrock GUI form (register / login) for Bedrock players connected through
@@ -31,16 +35,27 @@ import java.util.Objects;
  * switch's auto login instead.
  * <p>
  * Registered players get a login form; unregistered players get a register form with a
- * password confirmation field. Failed attempts re-open the form so the player can retry;
- * closing the form falls back to the regular chat prompts of AuthMe.
+ * password confirmation field. The form keeps coming back while the player remains
+ * unauthenticated: after a failed attempt (rejected password, validation error) and also
+ * after the player closed it, until the player authenticates, leaves the server or is
+ * kicked by the login timeout. At most one re-show is scheduled per player at a time,
+ * so a re-sent form closing the form already open cannot cascade.
  */
 public class BedrockAuthFormListener implements Listener {
 
     /** Delay before the form is opened, letting the join-time auth listeners run first. */
     private static final long OPEN_DELAY_TICKS = 40L;
 
-    /** Delay after a submit before the form is offered again while still unauthenticated. */
+    /** Delay after a submit or a close before the form is offered again while still unauthenticated. */
     private static final long RESHOW_DELAY_TICKS = 30L;
+
+    /**
+     * Players with a pending form re-show task. Sending a new form to a Bedrock player
+     * closes the form currently open, whose closed callback would schedule another re-show:
+     * this set debounces such cascades to at most one pending re-show per player. Thread-safe,
+     * as form callbacks run on a Floodgate network thread.
+     */
+    private final Set<UUID> pendingReshow = ConcurrentHashMap.newKeySet();
 
     private final ConsoleLogger logger = ConsoleLoggerFactory.get(BedrockAuthFormListener.class);
     private final AuthMeApi authmeApi = AuthMeApi.getInstance();
@@ -141,7 +156,7 @@ public class BedrockAuthFormListener implements Listener {
                 .label(messages.retrieveSingle(player, MessageKey.BEDROCK_AUTH_LOGIN_LABEL))
                 .input(messages.retrieveSingle(player, MessageKey.BEDROCK_AUTH_PASSWORD_INPUT), "")
                 .validResultHandler(response -> handleLoginResponse(player, response.asInput(0)))
-                .closedResultHandler(() -> { })
+                .closedResultHandler(() -> scheduleReshow(player))
                 .build();
             deliverForm(player, form);
         } catch (NoClassDefFoundError | Exception e) {
@@ -165,7 +180,7 @@ public class BedrockAuthFormListener implements Listener {
                 .input(messages.retrieveSingle(player, MessageKey.BEDROCK_AUTH_PASSWORD_CONFIRM_INPUT), "")
                 .validResultHandler(response ->
                     handleRegisterResponse(player, response.asInput(0), response.asInput(1)))
-                .closedResultHandler(() -> { })
+                .closedResultHandler(() -> scheduleReshow(player))
                 .build();
             deliverForm(player, form);
         } catch (NoClassDefFoundError | Exception e) {
@@ -247,17 +262,36 @@ public class BedrockAuthFormListener implements Listener {
 
     /**
      * Offers the form again after a short delay when the player is still not authenticated,
-     * e.g. after a failed login attempt. Skipped automatically once the player is logged in,
-     * has left the server or entered the identity switch flow.
+     * e.g. after a failed login attempt or after the player closed the form. At most one
+     * re-show is pending per player: further requests while one is pending are ignored,
+     * preventing cascades caused by a re-sent form closing the form already open. Skipped
+     * automatically once the player is logged in, has left the server or entered the
+     * identity switch flow.
      *
      * @param player the player to offer the form to again
      */
     private void scheduleReshow(Player player) {
+        if (!pendingReshow.add(player.getUniqueId())) {
+            // A re-show is already pending for this player
+            return;
+        }
         bukkitService.runTaskLater(player, () -> {
+            pendingReshow.remove(player.getUniqueId());
             if (isFormRequired(player)) {
                 openForm(player);
             }
         }, RESHOW_DELAY_TICKS);
+    }
+
+    /**
+     * Cleans up the re-show bookkeeping when a player leaves, so a returning player is
+     * never blocked by a stale pending entry.
+     *
+     * @param event the quit event
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        pendingReshow.remove(event.getPlayer().getUniqueId());
     }
 
     /**

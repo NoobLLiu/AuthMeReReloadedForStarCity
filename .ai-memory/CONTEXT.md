@@ -201,6 +201,12 @@ Bug 2 — PendingSwitch 消费过早：
 
 **与现有功能的协作**：`FORCE_LOGIN_BEDROCK` 开启时 BedrockAutoLoginListener 在 20 tick 自动登录 → 40 tick 时已认证自然跳过；切换而来的玩家由 consumeAutoLogin/待定 switch 检查排除；超时踢出由 TimeoutTask 负责，表单重发不与其冲突。
 
+**会话 8 补充（同日）：关闭表单也反复弹窗拦截**——用户要求"密码不符合要求或直接关闭表单时反复弹窗拦截"：
+- 两处 `closedResultHandler` 从空实现改为 `scheduleReshow(player)`（30 tick 后重发，形成拦截循环，直到认证/退出/超时踢出）；
+- 新增 `pendingReshow`（`ConcurrentHashMap.newKeySet()`，线程安全，因表单回调在 Floodgate 网络线程）防抖：发送新表单会关闭旧表单并触发其 closed 回调，防抖保证每玩家至多一个待发任务，防止级联；任务执行时先移除条目再检查 `isFormRequired`；
+- 新增 `onPlayerQuit`（MONITOR）清理防抖集合，防重进玩家被残留条目卡住；
+- 提交路径不变：注册校验失败（两次不一致/ValidationService 拒绝）→ 聊天提示 + **立即重发**注册表单；登录空密码/密码错误 → 提示 + 30 tick 重发；`RESHOW_DELAY_TICKS` 语义扩展为"提交或关闭后"。
+
 ## 七、后续可继续的工作（新会话候选）
 
 1. **合并分支**：将 `trae/agent-0iHQBQ` 合并到 `origin/feat/agent-mail`（合并/创建 PR）
