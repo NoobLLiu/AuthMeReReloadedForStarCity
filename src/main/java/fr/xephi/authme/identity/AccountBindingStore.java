@@ -1,7 +1,7 @@
 package fr.xephi.authme.identity;
 
+import fr.xephi.authme.ConsoleLogger;
 import fr.xephi.authme.initialization.DataFolder;
-import fr.xephi.authme.output.ConsoleLogger;
 import fr.xephi.authme.output.ConsoleLoggerFactory;
 import fr.xephi.authme.security.crypts.HashedPassword;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -254,6 +254,20 @@ public class AccountBindingStore {
          */
         public long getBoundAt() {
             return boundAt;
+        }
+
+        /**
+         * @return the password snapshot of the first account at bind time
+         */
+        public HashedPassword getPasswordA() {
+            return passwordA;
+        }
+
+        /**
+         * @return the password snapshot of the second account at bind time
+         */
+        public HashedPassword getPasswordB() {
+            return passwordB;
         }
 
         /**

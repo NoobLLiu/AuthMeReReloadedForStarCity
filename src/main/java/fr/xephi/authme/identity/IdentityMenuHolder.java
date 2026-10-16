@@ -22,7 +22,8 @@ public class IdentityMenuHolder implements InventoryHolder {
      * Constructor.
      *
      * @param email the email address bound to the viewing player, or null if not bound
-     * @param accounts the switchable accounts under that email (excluding the current one)
+     *        (optional information, no longer required for switching)
+     * @param accounts the accounts bound to the viewing player (excluding the current one)
      * @param page the zero-based page number currently displayed
      */
     public IdentityMenuHolder(String email, List<AccountEntry> accounts, int page) {
@@ -53,7 +54,7 @@ public class IdentityMenuHolder implements InventoryHolder {
     }
 
     /**
-     * @return the switchable accounts displayed by the menu
+     * @return the accounts bound to the viewing player, as displayed by the menu
      */
     public List<AccountEntry> getAccounts() {
         return accounts;

@@ -26,6 +26,7 @@ import fr.xephi.authme.listener.BlockListener;
 import fr.xephi.authme.listener.DoubleLoginFixListener;
 import fr.xephi.authme.listener.EntityListener;
 import fr.xephi.authme.listener.IdentityAutoLoginListener;
+import fr.xephi.authme.listener.IdentityBindChatListener;
 import fr.xephi.authme.listener.IdentityMenuClickListener;
 import fr.xephi.authme.listener.IdentitySwitchJoinListener;
 import fr.xephi.authme.listener.LoginLocationFixListener;
@@ -346,6 +347,7 @@ public class AuthMe extends JavaPlugin {
         pluginManager.registerEvents(injector.getSingleton(PreLoginIdentityListener.class), this);
         pluginManager.registerEvents(injector.getSingleton(IdentityAutoLoginListener.class), this);
         pluginManager.registerEvents(injector.getSingleton(IdentityMenuClickListener.class), this);
+        pluginManager.registerEvents(injector.getSingleton(IdentityBindChatListener.class), this);
         pluginManager.registerEvents(injector.getSingleton(IdentitySwitchJoinListener.class), this);
 
         // Floodgate linked-identity hook: after an identity switch, plugins judge the
