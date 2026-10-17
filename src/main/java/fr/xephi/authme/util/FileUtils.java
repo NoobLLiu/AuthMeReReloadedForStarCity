@@ -38,7 +38,20 @@ public final class FileUtils {
     public static boolean copyFileFromResource(File destinationFile, String resourcePath) {
         if (destinationFile.exists()) {
             return true;
-        } else if (!createDirectory(destinationFile.getParentFile())) {
+        }
+        return forceCopyFileFromResource(destinationFile, resourcePath);
+    }
+
+    /**
+     * Copy a resource file (from the JAR) to the given file, overwriting it if it exists.
+     *
+     * @param destinationFile The file to copy to (outside of JAR)
+     * @param resourcePath    Local path to the resource file (path to file within JAR)
+     *
+     * @return False if the file could not be copied, true otherwise
+     */
+    public static boolean forceCopyFileFromResource(File destinationFile, String resourcePath) {
+        if (!createDirectory(destinationFile.getParentFile())) {
             logger.warning("Cannot create parent directories for '" + destinationFile + "'");
             return false;
         }
@@ -48,7 +61,7 @@ public final class FileUtils {
                 logger.warning(format("Cannot copy resource '%s' to file '%s': cannot load resource",
                     resourcePath, destinationFile.getPath()));
             } else {
-                java.nio.file.Files.copy(is, destinationFile.toPath());
+                java.nio.file.Files.copy(is, destinationFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 return true;
             }
         } catch (IOException e) {

@@ -6,6 +6,9 @@
 # %username% - Replaces the username of the player receiving the message.
 # %displayname% - Replaces the nickname (and colors) of the player receiving the message.
 
+# 文件版本：服務端已解包過舊檔案時，啟動時會按此版本號自動覆蓋更新
+file_version: 2
+
 # Registration
 registration:
     disabled: '&8[&6用戶系統&8] &c本伺服器已停止新玩家註冊。'
@@ -176,6 +179,15 @@ two_factor:
 # 3rd party features: Bedrock Auto Login
 bedrock_auto_login:
   success: "&8[&6用戶系統&8] &a基岩版自動登錄完成"
+
+# 3rd party features: Bedrock registration form
+bedrock_register:
+  form_title: '設置密碼註冊'
+  form_password: '密碼'
+  form_password_hint: '輸入你的密碼'
+  form_confirm: '重複密碼'
+  form_confirm_hint: '再輸入一次密碼'
+  form_invalid: '&c密碼不能為空'
 
 # 3rd party features: Login Location Fix
 login_location_fix:

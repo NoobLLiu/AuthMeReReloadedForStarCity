@@ -3,6 +3,10 @@
 # %username% - Replaces the username of the player receiving the message.
 # %displayname% - Replaces the nickname (and colors) of the player receiving the message.
 
+# Version of this file: raised when the bundled texts change, so servers with an
+# already-extracted older file are refreshed automatically on startup
+file_version: 2
+
 # Registration
 registration:
   disabled: '&cIn-game registration is disabled!'
@@ -183,6 +187,15 @@ two_factor:
 # 3rd party features: Bedrock Auto Login
 bedrock_auto_login:
   success: '&aBedrock auto login success!'
+
+# 3rd party features: Bedrock registration form
+bedrock_register:
+  form_title: 'Register'
+  form_password: 'Password'
+  form_password_hint: 'Enter your password'
+  form_confirm: 'Confirm password'
+  form_confirm_hint: 'Enter the password again'
+  form_invalid: '&cThe password cannot be empty'
 
 # 3rd party features: Login Location Fix
 login_location_fix:

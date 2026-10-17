@@ -3,6 +3,9 @@
 # %username% - Replaces the username of the player receiving the message.
 # %displayname% - Replaces the nickname (and colors) of the player receiving the message.
 
+# 文件版本：服务端已解包过旧文件时，启动时会按此版本号自动覆盖更新
+file_version: 2
+
 # Registration
 registration:
     disabled: '&c注册已被禁止'
@@ -191,6 +194,15 @@ two_factor:
 # 3rd party features: Bedrock Auto Login
 bedrock_auto_login:
   success: "&a基岩版自动登录完成"
+
+# 3rd party features: Bedrock registration form
+bedrock_register:
+  form_title: '设置密码注册'
+  form_password: '密码'
+  form_password_hint: '输入你的密码'
+  form_confirm: '重复密码'
+  form_confirm_hint: '再输入一次密码'
+  form_invalid: '&c密码不能为空'
 
 # 3rd party features: Login Location Fix
 login_location_fix:

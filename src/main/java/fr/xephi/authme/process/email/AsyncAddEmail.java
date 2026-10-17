@@ -10,7 +10,6 @@ import fr.xephi.authme.mail.EmailService;
 import fr.xephi.authme.message.MessageKey;
 import fr.xephi.authme.output.ConsoleLoggerFactory;
 import fr.xephi.authme.process.AsynchronousProcess;
-import fr.xephi.authme.service.AccountMigrationService;
 import fr.xephi.authme.service.BukkitService;
 import fr.xephi.authme.service.CommonService;
 import fr.xephi.authme.service.EmailPasswordService;
@@ -59,13 +58,7 @@ public class AsyncAddEmail implements AsynchronousProcess {
     private PendingEmailChangeCache pendingEmailChangeCache;
 
     @Inject
-    private AccountMigrationService accountMigrationService;
-
-    @Inject
     private EmailPasswordService emailPasswordService;
-
-    @Inject
-    private LimboService limboService;
 
     AsyncAddEmail() {
     }
@@ -88,11 +81,6 @@ public class AsyncAddEmail implements AsynchronousProcess {
             } else {
                 dispatchVerificationCode(player, playerName, email);
             }
-        } else if (accountMigrationService.isAwaitingEmailBinding(player)) {
-            // v1 account pending migration: the player is unauthenticated on purpose
-            // and must bind an email address before being allowed to play
-            dispatchVerificationCode(player, playerName, email);
-            limboService.resetTimeoutTask(player);
         } else {
             sendUnloggedMessage(player);
         }

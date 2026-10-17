@@ -275,12 +275,9 @@ public class AsynchronousLogin implements AsynchronousProcess {
      */
     public void performLogin(Player player, PlayerAuth auth) {
         if (player.isOnline()) {
-            // Intercept logins of accounts pending a schema migration: the player remains
-            // unauthenticated and must bind an email address before being allowed to play
-            if (accountMigrationService.isMigrationPending(auth)) {
-                accountMigrationService.handlePendingMigration(player, auth);
-                return;
-            }
+            // Silently upgrade accounts from an older schema version: email addresses are
+            // optional, so no interaction with the player is needed for the migration
+            accountMigrationService.migrateIfNeeded(player, auth);
 
             boolean isFirstLogin = (auth.getLastLogin() == null);
 

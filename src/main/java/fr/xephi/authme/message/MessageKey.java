@@ -29,6 +29,24 @@ public enum MessageKey {
      */
     BEDROCK_AUTO_LOGGED_IN("bedrock_auto_login.success"),
 
+    /** Bedrock registration form: title of the register form. */
+    BEDROCK_REGISTER_FORM_TITLE("bedrock_register.form_title"),
+
+    /** Bedrock registration form: the password input label. */
+    BEDROCK_REGISTER_FORM_PASSWORD("bedrock_register.form_password"),
+
+    /** Bedrock registration form: the password input placeholder. */
+    BEDROCK_REGISTER_FORM_PASSWORD_HINT("bedrock_register.form_password_hint"),
+
+    /** Bedrock registration form: the password confirmation input label. */
+    BEDROCK_REGISTER_FORM_CONFIRM("bedrock_register.form_confirm"),
+
+    /** Bedrock registration form: the password confirmation input placeholder. */
+    BEDROCK_REGISTER_FORM_CONFIRM_HINT("bedrock_register.form_confirm_hint"),
+
+    /** Bedrock registration form: the password was left empty. */
+    BEDROCK_REGISTER_FORM_INVALID("bedrock_register.form_invalid"),
+
     /**
      * In order to use this command you must be authenticated!
      */
@@ -232,15 +250,6 @@ public enum MessageKey {
 
     /** No pending email change. Use /email add or /email change first. */
     EMAIL_NO_PENDING_CHANGE("email.no_pending_change"),
-
-    /** Your account needs to be bound to an email address before you can play! Use /email add &lt;email&gt; */
-    EMAIL_MIGRATION_REQUIRED("email.migration_required"),
-
-    /** Email address bound successfully! Your account has been upgraded, welcome! */
-    EMAIL_MIGRATION_COMPLETE("email.migration_complete"),
-
-    /** Your account has been migrated, but you must set a new password: /register <password> <ConfirmPassword> */
-    EMAIL_MIGRATION_PASSWORD_REQUIRED("email.migration_password_required"),
 
     /** This email already has a password; it has been adopted, no need to set a new one. */
     EMAIL_PASSWORD_ADOPTED("email.password_adopted"),
