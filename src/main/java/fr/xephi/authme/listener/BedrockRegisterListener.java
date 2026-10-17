@@ -11,6 +11,7 @@ import fr.xephi.authme.service.BukkitService;
 import fr.xephi.authme.service.ValidationService;
 import fr.xephi.authme.settings.Settings;
 import fr.xephi.authme.settings.properties.HooksSettings;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -59,23 +60,28 @@ public class BedrockRegisterListener implements Listener {
         UUID uuid = player.getUniqueId();
         bukkitService.runTaskLater(player, () -> {
             if (player.isOnline() && isBedrockPlayer(uuid) && !authmeApi.isRegistered(player.getName())) {
-                openRegisterForm(player);
+                openRegisterForm(player, null);
             }
         }, 30L);
     }
 
     /**
      * Sends the registration form with the password and its confirmation. On validation
-     * failure the form is reopened; on success the shared registration process is started.
-     * Falls back silently to the chat command when the form cannot be delivered.
+     * failure the form is reopened with the reason shown in red on the first line of the
+     * form body; on success the shared registration process is started. Falls back
+     * silently to the chat command when the form cannot be delivered.
      *
      * @param player the player to send the form to
+     * @param errorReason the reason the form is being shown again, or null on first open
      */
-    private void openRegisterForm(Player player) {
+    private void openRegisterForm(Player player, String errorReason) {
         try {
             CustomForm.Builder builder = CustomForm.builder()
-                .title(messages.retrieveSingle(player, MessageKey.BEDROCK_REGISTER_FORM_TITLE))
-                .input(messages.retrieveSingle(player, MessageKey.BEDROCK_REGISTER_FORM_PASSWORD),
+                .title(messages.retrieveSingle(player, MessageKey.BEDROCK_REGISTER_FORM_TITLE));
+            if (errorReason != null) {
+                builder.label(buildErrorLabel(errorReason));
+            }
+            builder.input(messages.retrieveSingle(player, MessageKey.BEDROCK_REGISTER_FORM_PASSWORD),
                     messages.retrieveSingle(player, MessageKey.BEDROCK_REGISTER_FORM_PASSWORD_HINT))
                 .input(messages.retrieveSingle(player, MessageKey.BEDROCK_REGISTER_FORM_CONFIRM),
                     messages.retrieveSingle(player, MessageKey.BEDROCK_REGISTER_FORM_CONFIRM_HINT));
@@ -99,7 +105,7 @@ public class BedrockRegisterListener implements Listener {
     /**
      * Handles a form submission on the main thread: validates the input the same way the
      * register command does and then runs the shared registration process. Reopens the form
-     * on invalid input so the player can retry.
+     * with the failure reason on invalid input so the player can retry.
      *
      * @param player the player who submitted the form
      * @param password the entered password
@@ -110,23 +116,44 @@ public class BedrockRegisterListener implements Listener {
             return;
         }
         if (password == null || password.trim().isEmpty()) {
-            messages.send(player, MessageKey.BEDROCK_REGISTER_FORM_INVALID);
-            openRegisterForm(player);
+            reopenFormWithError(player, MessageKey.BEDROCK_REGISTER_FORM_INVALID);
             return;
         }
         if (!password.equals(confirmation)) {
-            messages.send(player, MessageKey.PASSWORD_MATCH_ERROR);
-            openRegisterForm(player);
+            reopenFormWithError(player, MessageKey.PASSWORD_MATCH_ERROR);
             return;
         }
         ValidationService.ValidationResult result =
             validationService.validatePassword(password, player.getName());
         if (result.hasError()) {
-            messages.send(player, result.getMessageKey(), result.getArgs());
-            openRegisterForm(player);
+            reopenFormWithError(player, result.getMessageKey(), result.getArgs());
             return;
         }
         management.performRegister(RegistrationMethod.PASSWORD_REGISTRATION,
             PasswordRegisterParams.of(player, password, null));
+    }
+
+    /**
+     * Reopens the registration form with the given failure reason, shown in red on the
+     * first line of the form body.
+     *
+     * @param player the player to reopen the form for
+     * @param key the message key of the failure reason
+     * @param args the replacements for the message key
+     */
+    private void reopenFormWithError(Player player, MessageKey key, String... args) {
+        openRegisterForm(player, messages.retrieveSingle(player, key, args));
+    }
+
+    /**
+     * Builds the error label text: the first line in red, any further lines back to the
+     * default color so the rest of the form body is not tinted.
+     *
+     * @param reason the failure reason (may span several lines)
+     * @return the label text with the color reset after the first line
+     */
+    private String buildErrorLabel(String reason) {
+        String plain = ChatColor.stripColor(reason);
+        return ChatColor.RED + plain.replace("\n", "\n" + ChatColor.RESET);
     }
 }
