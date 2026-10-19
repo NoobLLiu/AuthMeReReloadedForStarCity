@@ -15,6 +15,10 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -148,6 +152,9 @@ public abstract class AbstractMessageFileHandler implements Reloadable {
 
     /**
      * Copies the messages file from the JAR to the local messages/ folder if it doesn't exist.
+     * An existing file is overwritten when the bundled file declares a newer
+     * {@code file_version}: since files are only extracted on first use, a plugin update
+     * would otherwise keep serving outdated texts from the previously extracted file.
      *
      * @param filePath path to the messages file to use
      * @return the messages file to use
@@ -157,6 +164,7 @@ public abstract class AbstractMessageFileHandler implements Reloadable {
         File file = new File(dataFolder, filePath);
         // Check that JAR file exists to avoid logging an error
         if (FileUtils.getResourceFromJar(filePath) != null && FileUtils.copyFileFromResource(file, filePath)) {
+            updateFileIfBundledVersionIsNewer(file, filePath);
             return file;
         }
 
@@ -165,6 +173,48 @@ public abstract class AbstractMessageFileHandler implements Reloadable {
         } else {
             logger.warning("Wanted to copy default messages file '" + defaultFile + "' from JAR but it didn't exist");
             return null;
+        }
+    }
+
+    /**
+     * Overwrites the local message file with the bundled one when the bundled file has a
+     * higher {@code file_version}. Files without the key (version 0) are never overwritten,
+     * so untouched upstream language files remain as they are.
+     *
+     * @param file the local message file
+     * @param filePath the local path to the message file
+     */
+    private void updateFileIfBundledVersionIsNewer(File file, String filePath) {
+        try {
+            int bundledVersion = readFileVersion(FileUtils.getResourceFromJar(filePath));
+            if (bundledVersion <= 0) {
+                return;
+            }
+            int localVersion = YamlConfiguration.loadConfiguration(file).getInt("file_version", 0);
+            if (localVersion >= bundledVersion) {
+                return;
+            }
+            if (FileUtils.forceCopyFileFromResource(file, filePath)) {
+                logger.info("Updated message file '" + filePath + "' from version "
+                    + localVersion + " to " + bundledVersion);
+            }
+        } catch (Exception e) {
+            logger.logException("Could not check the version of message file '" + filePath + "'", e);
+        }
+    }
+
+    /**
+     * Reads the {@code file_version} of the given YAML stream.
+     *
+     * @param stream the stream to read from (closed by this method), may be null
+     * @return the declared version, or 0 when unavailable
+     */
+    private int readFileVersion(InputStream stream) throws IOException {
+        if (stream == null) {
+            return 0;
+        }
+        try (InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+            return YamlConfiguration.loadConfiguration(reader).getInt("file_version", 0);
         }
     }
 }

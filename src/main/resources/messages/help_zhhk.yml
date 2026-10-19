@@ -1,5 +1,8 @@
 # Translation config for the AuthMe help, e.g. when /authme help or /authme help register is called
 
+# 文件版本：服務端已解包過舊檔案時，啟動時會按此版本號自動覆蓋更新
+file_version: 1
+
 # -------------------------------------------------------
 # List of texts used in the help section
 common:
@@ -35,8 +38,26 @@ section:
 # Important: Put main commands like "authme" before their children (e.g. "authme.reload")
 commands:
     lg:
-        description: '個人登錄資訊選單'
-        detailedDescription: '查看目前登入帳戶、歸屬電郵及該電郵下的所有帳戶。選擇帳戶即可切換身份：切換後會被斷開連線，在 3 分鐘內重新進入伺服器即以所選帳戶的身份上線。使用 /lg sync 可手動將目前連線的UUID同步到帳戶。'
+        description: '帳戶切換面板'
+        detailedDescription: '開啟帳戶切換面板：可新增綁定帳戶（需驗證該帳戶的密碼），或切換到已綁定的帳戶。切換後會被斷開連線，在 3 分鐘內重新進入伺服器即以所選帳戶的身份上線。切換無需綁定電郵。'
+    lg.sync:
+        description: '同步帳戶UUID'
+        detailedDescription: '手動將目前連線的UUID同步到自己的帳戶。'
+    lg.bind:
+        description: '新增綁定帳戶'
+        detailedDescription: '透過驗證該帳戶的密碼，將另一個帳戶綁定到你的帳戶。綁定後可在 /lg 面板中互相切換。'
+        arg1:
+            label: 'account'
+            description: '要綁定的帳戶名'
+        arg2:
+            label: 'password'
+            description: '該帳戶的密碼'
+    lg.unbind:
+        description: '解除帳戶綁定'
+        detailedDescription: '解除你的帳戶與指定綁定帳戶之間的綁定。'
+        arg1:
+            label: 'account'
+            description: '已綁定的帳戶名'
     authme.register:
         description: '登記一個新的玩家帳戶'
         detailedDescription: '透過管理員身份，將一個玩家帳戶以指定的密碼註冊'

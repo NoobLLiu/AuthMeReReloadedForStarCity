@@ -1,5 +1,6 @@
 package fr.xephi.authme.command;
 
+import fr.xephi.authme.identity.AccountBindingStore;
 import fr.xephi.authme.permission.PermissionsManager;
 import fr.xephi.authme.service.BukkitService;
 import org.bukkit.command.Command;
@@ -43,13 +44,15 @@ public class TabCompleteHandler implements TabCompleter {
     private final CommandInitializer commandInitializer;
     private final PermissionsManager permissionsManager;
     private final BukkitService bukkitService;
+    private final AccountBindingStore accountBindingStore;
 
     @Inject
     TabCompleteHandler(CommandInitializer commandInitializer, PermissionsManager permissionsManager,
-                       BukkitService bukkitService) {
+                       BukkitService bukkitService, AccountBindingStore accountBindingStore) {
         this.commandInitializer = commandInitializer;
         this.permissionsManager = permissionsManager;
         this.bukkitService = bukkitService;
+        this.accountBindingStore = accountBindingStore;
     }
 
     @Override
@@ -118,6 +121,13 @@ public class TabCompleteHandler implements TabCompleter {
             } else if ("mode".equals(argumentName)) {
                 addIfPrefixMatches(suggestions, "ON", partial);
                 addIfPrefixMatches(suggestions, "OFF", partial);
+            } else if ("boundaccount".equals(argumentName) && sender instanceof Player) {
+                // Suggest the accounts bound to the sending player (e.g. for /lg unbind)
+                String senderLower = sender.getName().toLowerCase(Locale.ROOT);
+                for (AccountBindingStore.AccountBinding binding
+                        : accountBindingStore.getBindingsFor(senderLower)) {
+                    addIfPrefixMatches(suggestions, binding.getOther(senderLower), partial);
+                }
             } else if ("child".equals(argumentName)) {
                 for (String section : DEBUG_SECTIONS) {
                     addIfPrefixMatches(suggestions, section, partial);

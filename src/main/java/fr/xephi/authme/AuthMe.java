@@ -22,10 +22,12 @@ import fr.xephi.authme.initialization.SettingsProvider;
 import fr.xephi.authme.initialization.TaskCloser;
 import fr.xephi.authme.listener.AdvancedShulkerFixListener;
 import fr.xephi.authme.listener.BedrockAutoLoginListener;
+import fr.xephi.authme.listener.BedrockRegisterListener;
 import fr.xephi.authme.listener.BlockListener;
 import fr.xephi.authme.listener.DoubleLoginFixListener;
 import fr.xephi.authme.listener.EntityListener;
 import fr.xephi.authme.listener.IdentityAutoLoginListener;
+import fr.xephi.authme.listener.IdentityBindChatListener;
 import fr.xephi.authme.listener.IdentityMenuClickListener;
 import fr.xephi.authme.listener.IdentitySwitchJoinListener;
 import fr.xephi.authme.listener.LoginLocationFixListener;
@@ -346,6 +348,7 @@ public class AuthMe extends JavaPlugin {
         pluginManager.registerEvents(injector.getSingleton(PreLoginIdentityListener.class), this);
         pluginManager.registerEvents(injector.getSingleton(IdentityAutoLoginListener.class), this);
         pluginManager.registerEvents(injector.getSingleton(IdentityMenuClickListener.class), this);
+        pluginManager.registerEvents(injector.getSingleton(IdentityBindChatListener.class), this);
         pluginManager.registerEvents(injector.getSingleton(IdentitySwitchJoinListener.class), this);
 
         // Floodgate linked-identity hook: after an identity switch, plugins judge the
@@ -376,6 +379,10 @@ public class AuthMe extends JavaPlugin {
         }
 
         //Register 3rd party listeners
+        // Bedrock registration form: unregistered Bedrock players get a native password form
+        if (settings.getProperty(HooksSettings.HOOK_FLOODGATE_PLAYER) && getServer().getPluginManager().getPlugin("floodgate") != null) {
+            pluginManager.registerEvents(injector.getSingleton(BedrockRegisterListener.class), this);
+        }
         if (settings.getProperty(SecuritySettings.FORCE_LOGIN_BEDROCK) && settings.getProperty(HooksSettings.HOOK_FLOODGATE_PLAYER) && getServer().getPluginManager().getPlugin("floodgate") != null) {
             pluginManager.registerEvents(injector.getSingleton(BedrockAutoLoginListener.class), this);
         } else if (settings.getProperty(SecuritySettings.FORCE_LOGIN_BEDROCK) && (!settings.getProperty(HooksSettings.HOOK_FLOODGATE_PLAYER) || getServer().getPluginManager().getPlugin("floodgate") == null)) {

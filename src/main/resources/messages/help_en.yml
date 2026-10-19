@@ -1,5 +1,9 @@
 # Translation config for the AuthMe help, e.g. when /authme help or /authme help register is called
 
+# Version of this file: raised when the bundled texts change, so servers with an
+# already-extracted older file are refreshed automatically on startup
+file_version: 1
+
 # -------------------------------------------------------
 # List of texts used in the help section
 common:
@@ -35,8 +39,26 @@ section:
 # Important: Put main commands like "authme" before their children (e.g. "authme.reload")
 commands:
     lg:
-        description: 'Personal login information menu'
-        detailedDescription: 'View the account you are logged in with, its bound email address and all accounts under that email. Select an account to switch identity: you will be disconnected and, by rejoining within three minutes, you will enter the server as the selected account. Use /lg sync to manually record the UUID you are currently connected with into your account.'
+        description: 'Account switch panel'
+        detailedDescription: 'Open the account switch panel: bind a new account (verified by that account''s password) or switch to one of the accounts bound to yours. Switching disconnects you; by rejoining within three minutes you enter the server as the selected account. No email address is required for switching.'
+    lg.sync:
+        description: 'Sync the account''s UUID'
+        detailedDescription: 'Manually record the UUID you are currently connected with into your own account.'
+    lg.bind:
+        description: 'Bind another account'
+        detailedDescription: 'Bind another account to yours by verifying that account''s password. Bound accounts can be switched to from the /lg panel.'
+        arg1:
+            label: 'account'
+            description: 'Name of the account to bind'
+        arg2:
+            label: 'password'
+            description: 'Password of that account'
+    lg.unbind:
+        description: 'Unbind an account'
+        detailedDescription: 'Remove the binding between your account and the given bound account.'
+        arg1:
+            label: 'account'
+            description: 'Name of the bound account'
     authme.register:
         description: 'Register a player'
         detailedDescription: 'Register the specified player with the specified password.'

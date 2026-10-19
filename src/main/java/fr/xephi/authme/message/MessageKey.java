@@ -29,6 +29,24 @@ public enum MessageKey {
      */
     BEDROCK_AUTO_LOGGED_IN("bedrock_auto_login.success"),
 
+    /** Bedrock registration form: title of the register form. */
+    BEDROCK_REGISTER_FORM_TITLE("bedrock_register.form_title"),
+
+    /** Bedrock registration form: the password input label. */
+    BEDROCK_REGISTER_FORM_PASSWORD("bedrock_register.form_password"),
+
+    /** Bedrock registration form: the password input placeholder. */
+    BEDROCK_REGISTER_FORM_PASSWORD_HINT("bedrock_register.form_password_hint"),
+
+    /** Bedrock registration form: the password confirmation input label. */
+    BEDROCK_REGISTER_FORM_CONFIRM("bedrock_register.form_confirm"),
+
+    /** Bedrock registration form: the password confirmation input placeholder. */
+    BEDROCK_REGISTER_FORM_CONFIRM_HINT("bedrock_register.form_confirm_hint"),
+
+    /** Bedrock registration form: the password was left empty. */
+    BEDROCK_REGISTER_FORM_INVALID("bedrock_register.form_invalid"),
+
     /**
      * In order to use this command you must be authenticated!
      */
@@ -89,32 +107,17 @@ public enum MessageKey {
     /** Please, login with the command: /login &lt;password&gt; */
     LOGIN_MESSAGE("login.login_request"),
 
-    /** Please, register to the server with the command: /register <email>, confirm the code with /email confirm <code>, then set a password with /register <password> <ConfirmPassword> */
+    /** Please, register to the server with the command: /register <password> <ConfirmPassword> */
     REGISTER_MESSAGE("registration.register_request"),
 
     /** You have exceeded the maximum number of registrations (%reg_count/%max_acc %reg_names) for your connection! */
     MAX_REGISTER_EXCEEDED("error.max_registration", "%max_acc", "%reg_count", "%reg_names"),
 
-    /** Usage: /register &lt;email&gt;, then /email confirm &lt;code&gt;, then /register &lt;password&gt; &lt;ConfirmPassword&gt; */
-    USAGE_REGISTER("registration.command_usage"),
-
-    /** Please enter your email address first: /register &lt;email&gt; */
-    REGISTER_USAGE_EMAIL("registration.command_usage_email"),
-
     /** Usage: /register &lt;password&gt; &lt;ConfirmPassword&gt; */
-    REGISTER_USAGE_PASSWORD("registration.command_usage_password"),
-
-    /** Email address confirmed! Now set your password with /register &lt;password&gt; &lt;ConfirmPassword&gt; */
-    REGISTER_EMAIL_CONFIRMED("registration.email_confirmed"),
-
-    /** This email already has a password: your account was registered with it and you were logged in automatically. */
-    REGISTER_PASSWORD_REUSED("registration.password_reused"),
+    USAGE_REGISTER("registration.command_usage"),
 
     /** This email is already bound to existing accounts: once verified, its password will be adopted and no new password is needed. */
     REGISTER_EMAIL_IN_USE_HINT("registration.email_in_use_hint"),
-
-    /** A verification code was already sent to %email: confirm it with /email confirm &lt;code&gt; before setting a password. */
-    REGISTER_VERIFICATION_REQUIRED("registration.verification_required", "%email"),
 
     /** Usage: /unregister &lt;password&gt; */
     USAGE_UNREGISTER("unregister.command_usage"),
@@ -247,15 +250,6 @@ public enum MessageKey {
 
     /** No pending email change. Use /email add or /email change first. */
     EMAIL_NO_PENDING_CHANGE("email.no_pending_change"),
-
-    /** Your account needs to be bound to an email address before you can play! Use /email add &lt;email&gt; */
-    EMAIL_MIGRATION_REQUIRED("email.migration_required"),
-
-    /** Email address bound successfully! Your account has been upgraded, welcome! */
-    EMAIL_MIGRATION_COMPLETE("email.migration_complete"),
-
-    /** Your account has been migrated, but you must set a new password: /register <password> <ConfirmPassword> */
-    EMAIL_MIGRATION_PASSWORD_REQUIRED("email.migration_password_required"),
 
     /** This email already has a password; it has been adopted, no need to set a new one. */
     EMAIL_PASSWORD_ADOPTED("email.password_adopted"),
@@ -449,20 +443,29 @@ public enum MessageKey {
     /** Identity menu (/lg): title of the inventory menu. */
     IDENTITY_MENU_TITLE("identity.menu_title"),
 
-    /** Identity menu: the email address is not bound. */
-    IDENTITY_EMAIL_NOT_BOUND("identity.email_not_bound"),
-
-    /** Identity menu: no other account is registered under the email. */
-    IDENTITY_MENU_NO_OTHER_ACCOUNTS("identity.no_other_accounts"),
+    /** Identity menu: no account is bound yet. */
+    IDENTITY_MENU_NO_BOUND_ACCOUNTS("identity.no_bound_accounts"),
 
     /** Identity menu lore: currently logged-in account. */
     IDENTITY_LORE_CURRENT("identity.lore_current"),
 
-    /** Identity menu lore: bound email address. */
+    /** Identity menu lore: bound email address (optional information). */
     IDENTITY_LORE_EMAIL("identity.lore_email"),
 
     /** Identity menu lore: click to switch to this identity. */
     IDENTITY_LORE_CLICK_SWITCH("identity.lore_click_switch"),
+
+    /** Identity menu lore: right-click to unbind this account. */
+    IDENTITY_LORE_CLICK_UNBIND("identity.lore_click_unbind"),
+
+    /** Identity menu lore: bind a new account. */
+    IDENTITY_LORE_BIND_ADD("identity.lore_bind_add"),
+
+    /** Identity menu lore: hint on the bind-new-account button. */
+    IDENTITY_LORE_BIND_ADD_HINT("identity.lore_bind_add_hint"),
+
+    /** Identity menu lore: command alternative on the bind-new-account button. */
+    IDENTITY_LORE_BIND_ADD_HINT_CMD("identity.lore_bind_add_hint_cmd"),
 
     /** Identity menu lore: Bedrock account. */
     IDENTITY_LORE_BEDROCK("identity.lore_bedrock"),
@@ -485,23 +488,74 @@ public enum MessageKey {
     /** Identity menu Bedrock form: prompt before the switchable account buttons. */
     IDENTITY_FORM_CHOOSE("identity.form_choose"),
 
+    /** Bind form (Bedrock): title of the bind-new-account form. */
+    IDENTITY_BIND_FORM_TITLE("identity.bind_form_title"),
+
+    /** Bind form (Bedrock): the account name input label. */
+    IDENTITY_BIND_FORM_ACCOUNT("identity.bind_form_account"),
+
+    /** Bind form (Bedrock): the account name input placeholder. */
+    IDENTITY_BIND_FORM_ACCOUNT_HINT("identity.bind_form_account_hint"),
+
+    /** Bind form (Bedrock): the password input label. */
+    IDENTITY_BIND_FORM_PASSWORD("identity.bind_form_password"),
+
+    /** Bind form (Bedrock): the password input placeholder. */
+    IDENTITY_BIND_FORM_PASSWORD_HINT("identity.bind_form_password_hint"),
+
+    /** Bind form (Bedrock): account name or password was left empty. */
+    IDENTITY_BIND_FORM_INVALID("identity.bind_form_invalid"),
+
+    /** Bind flow (Java chat input): prompt to enter "<account> <password>" in the chat. */
+    IDENTITY_BIND_CHAT_PROMPT("identity.bind_chat_prompt"),
+
+    /** Bind flow (Java chat input): the input was cancelled. */
+    IDENTITY_BIND_CHAT_CANCELLED("identity.bind_chat_cancelled"),
+
+    /** Bind flow (Java chat input): the entered format is invalid. */
+    IDENTITY_BIND_CHAT_INVALID("identity.bind_chat_invalid"),
+
+    /** The account has been bound successfully. */
+    IDENTITY_BIND_SUCCESS("identity.bind_success", "%target%"),
+
+    /** The account is already bound. */
+    IDENTITY_BIND_ALREADY("identity.bind_already", "%target%"),
+
+    /** The account to bind does not exist. */
+    IDENTITY_BIND_TARGET_NOT_FOUND("identity.bind_target_not_found", "%target%"),
+
+    /** The password of the account to bind is wrong. */
+    IDENTITY_BIND_WRONG_PASSWORD("identity.bind_wrong_password"),
+
+    /** You cannot bind your own account. */
+    IDENTITY_BIND_SELF("identity.bind_self"),
+
+    /** The account could not be bound due to a server-side error. */
+    IDENTITY_BIND_FAILED("identity.bind_failed"),
+
+    /** The binding was removed because the account's password was changed after binding. */
+    IDENTITY_BIND_EXPIRED("identity.bind_expired", "%target%"),
+
+    /** The binding to the account was removed successfully. */
+    IDENTITY_UNBIND_SUCCESS("identity.unbind_success", "%target%"),
+
+    /** There is no binding to the given account. */
+    IDENTITY_UNBIND_NOT_BOUND("identity.unbind_not_bound", "%target%"),
+
     /** Switch successful, please rejoin the server. */
     IDENTITY_SWITCH_SUCCESS_KICK("identity.switch_success_kick"),
 
     /** You are already using this identity. */
     IDENTITY_SWITCH_SELF("identity.switch_self"),
 
-    /** You must have an email address bound to your account to switch identities. */
-    IDENTITY_SWITCH_NOT_BOUND("identity.not_bound"),
+    /** The selected account is not bound to your account. */
+    IDENTITY_SWITCH_NOT_BOUND("identity.switch_not_bound"),
 
     /** The selected account no longer exists. */
     IDENTITY_SWITCH_TARGET_GONE("identity.target_gone"),
 
     /** No UUID recorded for the selected account yet: log in with it once to sync. */
     IDENTITY_SWITCH_UUID_MISSING("identity.uuid_missing"),
-
-    /** The selected account does not belong to the same email address. */
-    IDENTITY_SWITCH_EMAIL_MISMATCH("identity.email_mismatch"),
 
     /** The selected account is currently online. */
     IDENTITY_SWITCH_TARGET_OCCUPIED("identity.target_occupied", "%target%"),

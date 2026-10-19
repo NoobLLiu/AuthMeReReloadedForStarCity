@@ -4,10 +4,6 @@ public enum LimboPlayerState {
 
     PASSWORD_REQUIRED,
 
-    TOTP_REQUIRED,
-
-    EMAIL_REQUIRED,
-
-    MIGRATION_PASSWORD_REQUIRED
+    TOTP_REQUIRED
 
 }

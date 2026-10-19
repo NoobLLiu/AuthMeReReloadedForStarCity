@@ -97,10 +97,6 @@ class LimboPlayerTaskManager {
             return new MessageResult(MessageKey.LOGIN_MESSAGE);
         } else if (messageType == LimboMessageType.TOTP_CODE) {
             return new MessageResult(MessageKey.TWO_FACTOR_CODE_REQUIRED);
-        } else if (messageType == LimboMessageType.EMAIL_MIGRATION) {
-            return new MessageResult(MessageKey.EMAIL_MIGRATION_REQUIRED);
-        } else if (messageType == LimboMessageType.PASSWORD_MIGRATION) {
-            return new MessageResult(MessageKey.EMAIL_MIGRATION_PASSWORD_REQUIRED);
         } else if (registrationCaptchaManager.isCaptchaRequired(name)) {
             final String captchaCode = registrationCaptchaManager.getCaptchaCodeOrGenerateNew(name);
             return new MessageResult(MessageKey.CAPTCHA_FOR_REGISTRATION_REQUIRED, captchaCode);

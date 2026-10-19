@@ -20,13 +20,6 @@ public final class RegistrationMethod<P extends RegistrationParameters> {
         new RegistrationMethod<>(PasswordRegisterExecutor.class);
 
     /**
-     * Registration by adopting the password of an email address already bound to other
-     * accounts (the password follows the email, so no new password is set).
-     */
-    public static final RegistrationMethod<EmailAdoptRegisterParams> EMAIL_ADOPT_REGISTRATION =
-        new RegistrationMethod<>(EmailAdoptRegisterExecutor.class);
-
-    /**
      * Registration with two-factor authentication as login means.
      */
     public static final RegistrationMethod<TwoFactorRegisterParams> TWO_FACTOR_REGISTRATION =

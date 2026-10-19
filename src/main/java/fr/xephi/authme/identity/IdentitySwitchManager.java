@@ -2,7 +2,6 @@ package fr.xephi.authme.identity;
 
 import fr.xephi.authme.ConsoleLogger;
 import fr.xephi.authme.data.auth.PlayerAuth;
-import fr.xephi.authme.data.auth.PlayerCache;
 import fr.xephi.authme.datasource.DataSource;
 import fr.xephi.authme.geyser.FloodgateIdentityHook;
 import fr.xephi.authme.geyser.PendingLinkedRegistry;
@@ -41,11 +40,11 @@ public class IdentitySwitchManager {
     private final ConsoleLogger logger = ConsoleLoggerFactory.get(IdentitySwitchManager.class);
 
     private final DataSource dataSource;
-    private final PlayerCache playerCache;
     private final Messages messages;
     private final BukkitService bukkitService;
     private final PendingLinkedRegistry linkedRegistry;
     private final FloodgateIdentityHook identityHook;
+    private final IdentityBindManager bindManager;
 
     /** Pending switches, keyed by the lowercase name of the account that initiated the switch. */
     private final ExpiringMap<String, PendingSwitch> pendingBySource =
@@ -60,15 +59,15 @@ public class IdentitySwitchManager {
         new ExpiringMap<>(SWITCH_WINDOW_MINUTES, TimeUnit.MINUTES);
 
     @Inject
-    IdentitySwitchManager(DataSource dataSource, PlayerCache playerCache, Messages messages,
+    IdentitySwitchManager(DataSource dataSource, Messages messages,
                           BukkitService bukkitService, PendingLinkedRegistry linkedRegistry,
-                          FloodgateIdentityHook identityHook) {
+                          FloodgateIdentityHook identityHook, IdentityBindManager bindManager) {
         this.dataSource = dataSource;
-        this.playerCache = playerCache;
         this.messages = messages;
         this.bukkitService = bukkitService;
         this.linkedRegistry = linkedRegistry;
         this.identityHook = identityHook;
+        this.bindManager = bindManager;
     }
 
     /**
@@ -92,17 +91,15 @@ public class IdentitySwitchManager {
         final String ip = getPlayerIp(player);
 
         bukkitService.runTaskAsynchronously(() -> {
-            PlayerAuth sourceAuth = getAuth(sourceName);
-            String sourceEmail = sourceAuth == null ? null : sourceAuth.getEmail();
-
-            if (isEmailMissing(sourceEmail)) {
-                sendMessage(player, MessageKey.IDENTITY_SWITCH_NOT_BOUND);
-                return;
-            }
-
             PlayerAuth targetAuth = dataSource.getAuth(targetLower);
             if (targetAuth == null || targetAuth.getRealName() == null) {
                 sendMessage(player, MessageKey.IDENTITY_SWITCH_TARGET_GONE);
+                return;
+            }
+
+            // The accounts must be bound to each other and the target's password must still
+            // match the snapshot from bind time; otherwise the binding is removed automatically
+            if (!bindManager.validateSwitchBinding(player, sourceLower, targetAuth)) {
                 return;
             }
 
@@ -120,12 +117,6 @@ public class IdentitySwitchManager {
                 // linked-identity hook (linked-player query). Without it the rewrite
                 // cannot take effect, so reject early instead of stranding the player.
                 sendMessage(player, MessageKey.IDENTITY_SWITCH_BEDROCK_UNSUPPORTED);
-                return;
-            }
-
-            String targetEmail = targetAuth.getEmail();
-            if (isEmailMissing(targetEmail) || !targetEmail.equalsIgnoreCase(sourceEmail)) {
-                sendMessage(player, MessageKey.IDENTITY_SWITCH_EMAIL_MISMATCH);
                 return;
             }
 
@@ -354,17 +345,6 @@ public class IdentitySwitchManager {
      */
     public static boolean isFloodgateUuid(UUID uuid) {
         return uuid != null && uuid.toString().startsWith("00000000-0000-0000-");
-    }
-
-    /**
-     * Fetches the auth of the given account, preferring the login cache over the database.
-     *
-     * @param name the name of the account (any casing)
-     * @return the auth, or null if not registered
-     */
-    private PlayerAuth getAuth(String name) {
-        PlayerAuth auth = playerCache.getAuth(name);
-        return auth != null ? auth : dataSource.getAuth(name);
     }
 
     /**

@@ -3,18 +3,17 @@
 # %username% - Replaces the username of the player receiving the message.
 # %displayname% - Replaces the nickname (and colors) of the player receiving the message.
 
+# Version of this file: raised when the bundled texts change, so servers with an
+# already-extracted older file are refreshed automatically on startup
+file_version: 2
+
 # Registration
 registration:
   disabled: '&cIn-game registration is disabled!'
   name_taken: '&cYou already have registered this username!'
-  register_request: '&3Please, register to the server with the command: /register <email>, confirm the code with /email confirm <code>, then set a password with /register <password> <ConfirmPassword>'
-  command_usage: '&cUsage: /register <email>, then /email confirm <code>, then /register <password> <ConfirmPassword>'
-  command_usage_email: '&cUsage: /register <email>'
-  command_usage_password: '&cUsage: /register <password> <ConfirmPassword>'
-  email_confirmed: '&2Email address confirmed! Now set your password with /register <password> <ConfirmPassword>'
-  password_reused: '&2This email address already has a password: your account has been registered with it and you have been logged in automatically. Use the email''s password to log in next time.'
-  email_in_use_hint: '&eNote: this email address is already bound to existing accounts. Once you confirm the verification code, its password will be reused — you will not need to set a new one.'
-  verification_required: '&eA verification code was already sent to &a%email&e. Confirm it with &a/email confirm <code> &ebefore setting a password.'
+  register_request: '&3Please, register to the server with the command: /register <password> <ConfirmPassword>'
+  command_usage: '&cUsage: /register <password> <ConfirmPassword>'
+  email_in_use_hint: '&eNote: this email address is already bound to existing accounts. Once you confirm the verification code, your password will be replaced by the password of that email address.'
   reg_only: '&4Only registered users can join the server! Please visit https://example.com to register yourself!'
   success: '&2Successfully registered!'
   kicked_admin_registered: 'An admin just registered you; please log in again.'
@@ -149,7 +148,7 @@ captcha:
   wrong_captcha: '&cWrong captcha, please type "/captcha %captcha_code" into the chat!'
   valid_captcha: '&2Captcha code solved correctly!'
   captcha_for_registration: 'To register you have to solve a captcha first, please use the command: /captcha %captcha_code'
-  register_captcha_valid: '&2Valid captcha! You may now register with /register <email>'
+  register_captcha_valid: '&2Valid captcha! You may now register with /register <password> <ConfirmPassword>'
 
 # Verification code
 verification:
@@ -189,6 +188,15 @@ two_factor:
 bedrock_auto_login:
   success: '&aBedrock auto login success!'
 
+# 3rd party features: Bedrock registration form
+bedrock_register:
+  form_title: 'Register'
+  form_password: 'Password'
+  form_password_hint: 'Enter your password'
+  form_confirm: 'Confirm password'
+  form_confirm_hint: 'Enter the password again'
+  form_invalid: '&cThe password cannot be empty'
+
 # 3rd party features: Login Location Fix
 login_location_fix:
   fix_portal: '&aYou are stuck in portal during login.'
@@ -201,12 +209,15 @@ double_login_fix:
 
 # Identity menu (/lg) and identity switch
 identity:
-  menu_title: '&8Personal Login Information'
-  email_not_bound: 'No email address is bound'
-  no_other_accounts: 'No other account under your email'
+  menu_title: '&8Account Switch'
+  no_bound_accounts: 'No account is bound yet; use the button above to bind one'
   lore_current: 'Currently logged-in account'
   lore_email: 'Bound email address'
   lore_click_switch: 'Click to switch to this identity'
+  lore_click_unbind: 'Right-click to unbind this account'
+  lore_bind_add: 'Bind new account'
+  lore_bind_add_hint: 'Click, then enter the account name and its password to bind it'
+  lore_bind_add_hint_cmd: 'You can also run /lg bind account password'
   lore_bedrock: 'Bedrock'
   lore_java: 'Java'
   lore_page_prev: 'Previous page'
@@ -214,12 +225,29 @@ identity:
   lore_close: 'Close'
   form_page: '&7Page %current% of %total%'
   form_choose: '&eChoose the identity to switch to:'
+  bind_form_title: 'Bind new account'
+  bind_form_account: 'Account name'
+  bind_form_account_hint: 'Enter the name of the account to bind'
+  bind_form_password: 'Password'
+  bind_form_password_hint: "Enter that account's password"
+  bind_form_invalid: '&cAccount name and password must not be empty'
+  bind_chat_prompt: '&ePlease type &baccount password &ein the chat (separated by a space) to bind a new account, or type &bcancel &eto abort'
+  bind_chat_cancelled: '&7Bind input cancelled'
+  bind_chat_invalid: '&cInvalid format! Please type &baccount password&c (separated by a space), or type &bcancel'
+  bind_success: '&aAccount &b%target% &ahas been bound; you can now switch to it from the /lg panel'
+  bind_already: '&b%target% &eis already bound to your account'
+  bind_target_not_found: '&cThe account &b%target% &cdoes not exist'
+  bind_wrong_password: '&cPassword verification failed, please check the password of that account'
+  bind_self: '&cYou cannot bind your own account'
+  bind_failed: '&cThe account could not be bound, please contact an administrator'
+  bind_expired: '&cThe password of account &b%target% &cwas changed after binding; the binding has been removed automatically'
+  unbind_success: '&aThe binding with account &b%target% &ahas been removed'
+  unbind_not_bound: '&cYour account is not bound to &b%target%'
   switch_success_kick: '&aIdentity switch successful, please rejoin the server'
   switch_self: '&cYou are already using this identity'
-  not_bound: '&cYou must have an email address bound to your account to switch identities'
+  switch_not_bound: '&cThis account is not bound to your account, switching is not possible'
   target_gone: '&cThe selected account no longer exists'
   uuid_missing: '&cNo UUID recorded for this account yet; log in with it once to sync its info'
-  email_mismatch: '&cThe selected account does not belong to the same email address'
   target_occupied: '&cThe account %target% is currently online, switching is not possible'
   switch_conflict: '&cAnother player is already switching to this identity, please try again later'
   occupied_on_rejoin: '&cThe identity %target% was taken while you were reconnecting, the switch was not applied. Please log in normally and try again'

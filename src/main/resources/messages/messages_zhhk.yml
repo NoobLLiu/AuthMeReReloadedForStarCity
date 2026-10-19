@@ -6,18 +6,16 @@
 # %username% - Replaces the username of the player receiving the message.
 # %displayname% - Replaces the nickname (and colors) of the player receiving the message.
 
+# 文件版本：服務端已解包過舊檔案時，啟動時會按此版本號自動覆蓋更新
+file_version: 2
+
 # Registration
 registration:
     disabled: '&8[&6用戶系統&8] &c本伺服器已停止新玩家註冊。'
     name_taken: '&8[&6用戶系統&8] &c此用戶名已經註冊過了。'
-    register_request: '&8[&6用戶系統&8] &c請使用這個指令來註冊：《 &f/register <電郵地址>&c 》查收驗證碼後，使用《 &f/email confirm <驗證碼>&c 》完成驗證，再使用《 &f/register <密碼> <重覆密碼>&c 》設置密碼。'
-    command_usage: '&8[&6用戶系統&8] &f用法：《 &f/register <電郵地址>&f 》，驗證電郵後再用《 /register <密碼> <重覆密碼> 》設置密碼。'
-    command_usage_email: '&8[&6用戶系統&8] &f用法：《 /register <電郵地址> 》'
-    command_usage_password: '&8[&6用戶系統&8] &f用法：《 /register <密碼> <重覆密碼> 》'
-    email_confirmed: '&8[&6用戶系統&8] &a電郵驗證成功 ！請使用《 &f/register <密碼> <重覆密碼>&a 》設置密碼，完成註冊。'
-    password_reused: '&8[&6用戶系統&8] &a該電郵已設置過密碼，你的帳戶已直接使用該密碼完成註冊並自動登入。下次登入請使用該電郵的密碼。'
-    email_in_use_hint: '&8[&6用戶系統&8] &e提示：該電郵已綁定其他帳戶。驗證成功後將直接沿用該電郵已有的密碼，毋須再設置新密碼。'
-    verification_required: '&8[&6用戶系統&8] &e驗證碼已發送到 &a%email&e，請先使用《 &f/email confirm <驗證碼>&e 》完成驗證，再設置密碼。'
+    register_request: '&8[&6用戶系統&8] &c請使用這個指令來註冊：《 &f/register <密碼> <重覆密碼>&c 》'
+    command_usage: '&8[&6用戶系統&8] &f用法：《 /register <密碼> <重覆密碼> 》'
+    email_in_use_hint: '&8[&6用戶系統&8] &e提示：該電郵已綁定其他帳戶。驗證成功後，你的密碼將自動變更為該電郵現時使用的密碼。'
     reg_only: '&8[&6用戶系統&8] &f限已註冊會員，請先到本服網站進行註冊。'
     success: '&8[&6用戶系統&8] &b你成功註冊了。'
     kicked_admin_registered: '&8[&6用戶系統&8] &b管理員已替你完成註冊，請重新登入。'
@@ -182,6 +180,15 @@ two_factor:
 bedrock_auto_login:
   success: "&8[&6用戶系統&8] &a基岩版自動登錄完成"
 
+# 3rd party features: Bedrock registration form
+bedrock_register:
+  form_title: '設置密碼註冊'
+  form_password: '密碼'
+  form_password_hint: '輸入你的密碼'
+  form_confirm: '重複密碼'
+  form_confirm_hint: '再輸入一次密碼'
+  form_invalid: '&c密碼不能為空'
+
 # 3rd party features: Login Location Fix
 login_location_fix:
   fix_portal: '&8[&6用戶系統&8] &a你在登錄時卡在了地獄門, 現已修正'
@@ -194,23 +201,45 @@ double_login_fix:
 
 # Identity menu (/lg) and identity switch
 identity:
-  menu_title: '&8個人登錄資訊'
-  email_not_bound: '未綁定電郵'
-  no_other_accounts: '該電郵下暫無其他帳戶'
+  menu_title: '&8帳戶切換'
+  no_bound_accounts: '暫無綁定的帳戶，可點擊上方按鈕新增綁定'
   lore_current: '目前登入帳戶'
-  lore_email: '歸屬電郵'
+  lore_email: '綁定電郵'
   lore_click_switch: '點擊切換到此身份'
+  lore_click_unbind: '右鍵點擊解除綁定'
+  lore_bind_add: '新增綁定帳戶'
+  lore_bind_add_hint: '點擊後輸入該帳戶的名稱與密碼進行綁定'
+  lore_bind_add_hint_cmd: '也可輸入 /lg bind 帳戶 密碼 進行綁定'
   lore_bedrock: '基岩版'
   lore_java: 'Java版'
   lore_page_prev: '上一頁'
   lore_page_next: '下一頁'
   lore_close: '關閉'
+  form_page: '&7第 %current%/%total% 頁'
+  form_choose: '&e請選擇需要切換的身份：'
+  bind_form_title: '新增綁定帳戶'
+  bind_form_account: '帳戶名'
+  bind_form_account_hint: '輸入要綁定的帳戶名'
+  bind_form_password: '密碼'
+  bind_form_password_hint: '輸入該帳戶的密碼'
+  bind_form_invalid: '&c帳戶名與密碼不能為空'
+  bind_chat_prompt: '&e請在聊天欄輸入 &b帳戶 密碼 &e（以空格分隔）以綁定新帳戶，輸入 &bcancel &e取消'
+  bind_chat_cancelled: '&7已取消綁定輸入'
+  bind_chat_invalid: '&c格式錯誤！請輸入 &b帳戶 密碼&c（以空格分隔），或輸入 &bcancel &c取消'
+  bind_success: '&a已成功綁定帳戶 &b%target%&a，現在可以在 /lg 面板中切換'
+  bind_already: '&b%target% &e已與你的帳戶綁定'
+  bind_target_not_found: '&c帳戶 &b%target% &c不存在'
+  bind_wrong_password: '&c密碼驗證失敗，請確認該帳戶的密碼'
+  bind_self: '&c不能綁定目前帳戶自身'
+  bind_failed: '&c綁定失敗，請聯絡管理員查看後台日誌'
+  bind_expired: '&c帳戶 &b%target% &c的密碼在綁定後被更改，該綁定已自動解除'
+  unbind_success: '&a已解除與帳戶 &b%target% &a的綁定'
+  unbind_not_bound: '&c你的帳戶未綁定 &b%target%'
   switch_success_kick: '&a切換成功，請重新進入伺服器'
   switch_self: '&c你已處於該身份'
-  not_bound: '&c你尚未綁定電郵，無法切換身份'
+  switch_not_bound: '&c你尚未綁定該帳戶，無法切換身份'
   target_gone: '&c所選帳戶已不存在'
   uuid_missing: '&c未獲取到UUID，請先使用該帳戶登入以同步資訊'
-  email_mismatch: '&c所選帳戶與目前帳戶不歸屬同一電郵'
   target_occupied: '&c帳戶 %target% 目前在線，無法切換'
   switch_conflict: '&c該身份正被其他人切換，請稍後再試'
   occupied_on_rejoin: '&c身份 %target% 已被佔用，本次切換未生效，請正常登入後重試'

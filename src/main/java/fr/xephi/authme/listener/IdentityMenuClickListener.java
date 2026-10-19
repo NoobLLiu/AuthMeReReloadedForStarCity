@@ -1,5 +1,7 @@
 package fr.xephi.authme.listener;
 
+import fr.xephi.authme.identity.IdentityBedrockFormService;
+import fr.xephi.authme.identity.IdentityBindManager;
 import fr.xephi.authme.identity.IdentityMenuHolder;
 import fr.xephi.authme.identity.IdentityMenuService;
 import fr.xephi.authme.identity.IdentitySwitchManager;
@@ -16,18 +18,26 @@ import java.util.List;
 
 /**
  * Handles interaction with the identity menu (/lg): cancels all inventory interaction while
- * the menu is open and initiates the identity switch when an account is clicked.
+ * the menu is open, initiates the identity switch when an account is clicked (left click),
+ * removes the binding when an account is right-clicked and starts the bind-new-account flow
+ * when its button is clicked.
  */
 public class IdentityMenuClickListener implements Listener {
 
     private final IdentityMenuService identityMenuService;
     private final IdentitySwitchManager identitySwitchManager;
+    private final IdentityBindManager identityBindManager;
+    private final IdentityBedrockFormService identityBedrockFormService;
 
     @Inject
     IdentityMenuClickListener(IdentityMenuService identityMenuService,
-                              IdentitySwitchManager identitySwitchManager) {
+                              IdentitySwitchManager identitySwitchManager,
+                              IdentityBindManager identityBindManager,
+                              IdentityBedrockFormService identityBedrockFormService) {
         this.identityMenuService = identityMenuService;
         this.identitySwitchManager = identitySwitchManager;
+        this.identityBindManager = identityBindManager;
+        this.identityBedrockFormService = identityBedrockFormService;
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -54,7 +64,18 @@ public class IdentityMenuClickListener implements Listener {
             int index = holder.getPage() * countAccountsPerPage() + positionInAccountSlots(slot);
             List<IdentityMenuHolder.AccountEntry> accounts = holder.getAccounts();
             if (index >= 0 && index < accounts.size()) {
-                identitySwitchManager.initiateSwitch(player, accounts.get(index).getRealName());
+                if (event.isRightClick()) {
+                    identityBindManager.unbindAccount(player, accounts.get(index).getRealName());
+                } else {
+                    identitySwitchManager.initiateSwitch(player, accounts.get(index).getRealName());
+                }
+            }
+        } else if (slot == IdentityMenuService.getBindAddSlot()) {
+            if (IdentitySwitchManager.isBedrockPlayer(player)) {
+                // Bedrock players get a native input form instead of the chat capture flow
+                identityBedrockFormService.openBindForm(player);
+            } else {
+                identityBindManager.beginChatInput(player);
             }
         } else if (slot == 45) {
             identityMenuService.openPage(player, holder.getEmail(), holder.getAccounts(),

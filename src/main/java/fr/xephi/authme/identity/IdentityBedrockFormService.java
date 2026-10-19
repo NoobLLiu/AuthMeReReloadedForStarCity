@@ -8,6 +8,7 @@ import fr.xephi.authme.message.Messages;
 import fr.xephi.authme.service.BukkitService;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.geysermc.cumulus.form.CustomForm;
 import org.geysermc.cumulus.form.SimpleForm;
 import org.geysermc.floodgate.api.FloodgateApi;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
@@ -15,14 +16,15 @@ import org.geysermc.floodgate.api.player.FloodgatePlayer;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 /**
  * Bedrock edition variant of the identity menu (/lg): presents the same content as the chest
- * menu of {@link IdentityMenuService} (current account with UUID, bound email address, all
- * other accounts under the same email with edition tag, paging and close) as a native Bedrock
- * form. Only used for players connected through Geyser + Floodgate.
+ * menu of {@link IdentityMenuService} (current account with UUID, optional bound email
+ * address, button to bind a new account and all bound accounts with edition tag, paging and
+ * close) as native Bedrock forms. Only used for players connected through Geyser + Floodgate.
+ * The bind flow uses a {@link CustomForm} with native text inputs for the account name and
+ * password.
  */
 public class IdentityBedrockFormService {
 
@@ -35,17 +37,19 @@ public class IdentityBedrockFormService {
     private final BukkitService bukkitService;
     private final IdentitySwitchManager identitySwitchManager;
     private final IdentityMenuService menuService;
+    private final IdentityBindManager bindManager;
 
     @Inject
     IdentityBedrockFormService(DataSource dataSource, PlayerCache playerCache, Messages messages,
                                BukkitService bukkitService, IdentitySwitchManager identitySwitchManager,
-                               IdentityMenuService menuService) {
+                               IdentityMenuService menuService, IdentityBindManager bindManager) {
         this.dataSource = dataSource;
         this.playerCache = playerCache;
         this.messages = messages;
         this.bukkitService = bukkitService;
         this.identitySwitchManager = identitySwitchManager;
         this.menuService = menuService;
+        this.bindManager = bindManager;
     }
 
     /**
@@ -59,23 +63,7 @@ public class IdentityBedrockFormService {
         bukkitService.runTaskAsynchronously(() -> {
             PlayerAuth auth = getAuth(player.getName());
             String email = auth == null ? null : auth.getEmail();
-            List<IdentityMenuHolder.AccountEntry> accounts = new ArrayList<>();
-
-            if (!IdentitySwitchManager.isEmailMissing(email)) {
-                String playerLower = player.getName().toLowerCase(Locale.ROOT);
-                for (String name : dataSource.getAllAuthsByEmail(email)) {
-                    if (name == null || name.toLowerCase(Locale.ROOT).equals(playerLower)) {
-                        continue;
-                    }
-                    PlayerAuth accountAuth = dataSource.getAuth(name);
-                    if (accountAuth == null || accountAuth.getRealName() == null) {
-                        continue;
-                    }
-                    accounts.add(new IdentityMenuHolder.AccountEntry(
-                        accountAuth.getRealName(), accountAuth.getUuid(),
-                        IdentitySwitchManager.isFloodgateUuid(accountAuth.getUuid())));
-                }
-            }
+            List<IdentityMenuHolder.AccountEntry> accounts = bindManager.getValidBoundAccounts(player.getName());
             final String boundEmail = IdentitySwitchManager.isEmailMissing(email) ? null : email;
             final List<IdentityMenuHolder.AccountEntry> entries = accounts;
             bukkitService.runTask(player, () -> {
@@ -84,6 +72,50 @@ public class IdentityBedrockFormService {
                 }
             });
         });
+    }
+
+    /**
+     * Opens the bind-new-account form: a native Bedrock form with an account name and a
+     * password input. On submit, the account is bound after the password is verified.
+     * Falls back to the chat capture flow (which itself points to the command) when the
+     * form could not be delivered.
+     *
+     * @param player the player to open the bind form for
+     */
+    public void openBindForm(Player player) {
+        try {
+            CustomForm.Builder builder = CustomForm.builder()
+                .title(messages.retrieveSingle(player, MessageKey.IDENTITY_BIND_FORM_TITLE))
+                .input(messages.retrieveSingle(player, MessageKey.IDENTITY_BIND_FORM_ACCOUNT),
+                    messages.retrieveSingle(player, MessageKey.IDENTITY_BIND_FORM_ACCOUNT_HINT))
+                .input(messages.retrieveSingle(player, MessageKey.IDENTITY_BIND_FORM_PASSWORD),
+                    messages.retrieveSingle(player, MessageKey.IDENTITY_BIND_FORM_PASSWORD_HINT));
+            builder.validResultHandler(response -> {
+                String account = response.asInput(0);
+                String password = response.asInput(1);
+                bukkitService.runTask(player, () -> {
+                    if (!player.isOnline()) {
+                        return;
+                    }
+                    if (account == null || account.trim().isEmpty()
+                            || password == null || password.trim().isEmpty()) {
+                        messages.send(player, MessageKey.IDENTITY_BIND_FORM_INVALID);
+                    } else {
+                        bindManager.bindAccount(player, account.trim(), password.trim());
+                    }
+                });
+            });
+            builder.closedResultHandler(() -> { });
+
+            FloodgatePlayer fgPlayer = FloodgateApi.getInstance().getPlayer(player.getUniqueId());
+            if (fgPlayer == null || !fgPlayer.sendForm(builder.build())) {
+                bindManager.beginChatInput(player);
+            }
+        } catch (NoClassDefFoundError | Exception e) {
+            // Floodgate or Cumulus classes unavailable, or the form could not be delivered:
+            // fall back to the generic chat input flow
+            bindManager.beginChatInput(player);
+        }
     }
 
     /**
@@ -126,6 +158,11 @@ public class IdentityBedrockFormService {
         SimpleForm.Builder builder = SimpleForm.builder()
             .title(messages.retrieveSingle(player, MessageKey.IDENTITY_MENU_TITLE))
             .content(buildContent(player, email, accounts, page, maxPage));
+
+        // Button to bind a new account
+        builder.button(ChatColor.GREEN
+            + messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_BIND_ADD));
+        actions.add(() -> openBindForm(player));
 
         int from = page * ACCOUNTS_PER_PAGE;
         int to = Math.min(accounts.size(), from + ACCOUNTS_PER_PAGE);
@@ -176,9 +213,9 @@ public class IdentityBedrockFormService {
     }
 
     /**
-     * Builds the form content: the current account with its UUID, the bound email address,
-     * the page indicator (only when there is more than one page) and the no-account notice,
-     * mirroring the chest menu items.
+     * Builds the form content: the current account with its UUID, the bound email address
+     * (optional information), the page indicator (only when there is more than one page) and
+     * the no-account notice, mirroring the chest menu items.
      *
      * @param player the viewing player
      * @param email the bound email address, or null if not bound
@@ -194,14 +231,14 @@ public class IdentityBedrockFormService {
         sb.append(ChatColor.AQUA).append(player.getName()).append('\n')
             .append(ChatColor.GRAY)
             .append(messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_CURRENT)).append('\n')
-            .append(ChatColor.DARK_GRAY).append("UUID: ").append(player.getUniqueId()).append('\n')
-            .append('\n')
-            .append(ChatColor.YELLOW)
-            .append(messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_EMAIL)).append('\n')
-            .append(email == null
-                ? ChatColor.RED + messages.retrieveSingle(player, MessageKey.IDENTITY_EMAIL_NOT_BOUND)
-                : ChatColor.WHITE + email)
-            .append('\n');
+            .append(ChatColor.DARK_GRAY).append("UUID: ").append(player.getUniqueId());
+        if (email != null) {
+            sb.append('\n')
+                .append(ChatColor.DARK_GRAY)
+                .append(messages.retrieveSingle(player, MessageKey.IDENTITY_LORE_EMAIL))
+                .append(": ").append(ChatColor.WHITE).append(email);
+        }
+        sb.append('\n');
         if (maxPage > 0) {
             sb.append('\n')
                 .append(messages.retrieveSingle(player, MessageKey.IDENTITY_FORM_PAGE,
@@ -210,7 +247,7 @@ public class IdentityBedrockFormService {
         }
         if (accounts.isEmpty()) {
             sb.append('\n').append(ChatColor.RED)
-                .append(messages.retrieveSingle(player, MessageKey.IDENTITY_MENU_NO_OTHER_ACCOUNTS));
+                .append(messages.retrieveSingle(player, MessageKey.IDENTITY_MENU_NO_BOUND_ACCOUNTS));
         } else {
             sb.append('\n')
                 .append(messages.retrieveSingle(player, MessageKey.IDENTITY_FORM_CHOOSE));
